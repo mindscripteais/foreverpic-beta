@@ -48,6 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           image: user.image,
           isAdmin: user.isAdmin,
+          subscriptionTier: user.subscriptionTier,
         }
       },
     }),
@@ -56,30 +57,51 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub
-        // Cache tier and admin flag in token to avoid DB query on every request
-        if (!token.tier || token.isAdmin === undefined) {
+        // Always refresh tier and admin from DB using email
+        if (session.user.email) {
           const dbUser = await prisma.user.findUnique({
-            where: { id: token.sub },
+            where: { email: session.user.email },
             select: { subscriptionTier: true, isAdmin: true },
           })
-          token.tier = dbUser?.subscriptionTier ?? 'FREE'
-          token.isAdmin = dbUser?.isAdmin ?? false
+          if (dbUser) {
+            token.tier = dbUser.subscriptionTier
+            token.isAdmin = dbUser.isAdmin
+          }
         }
-        session.user.subscriptionTier = token.tier as string
-        session.user.isAdmin = token.isAdmin as boolean
+        session.user.subscriptionTier = (token.tier as string) ?? 'FREE'
+        session.user.isAdmin = (token.isAdmin as boolean) ?? false
       }
       return session
     },
-    async jwt({ token, user }) {
-      if (user) {
+    async jwt({ token, user, account }) {
+      if (user && account?.provider === 'google') {
+        // OAuth login — find or create user by email
+        if (user.email) {
+          let dbUser = await prisma.user.findUnique({
+            where: { email: user.email },
+            select: { id: true, subscriptionTier: true, isAdmin: true },
+          })
+          if (!dbUser) {
+            dbUser = await prisma.user.create({
+              data: {
+                email: user.email,
+                name: user.name,
+                image: user.image,
+                subscriptionTier: 'FREE',
+                isAdmin: user.email === 'egix.tuned@gmail.com',
+              },
+              select: { id: true, subscriptionTier: true, isAdmin: true },
+            })
+          }
+          token.sub = dbUser.id
+          token.tier = dbUser.subscriptionTier
+          token.isAdmin = dbUser.isAdmin
+        }
+      } else if (user) {
+        // Credentials login
         token.sub = user.id
-        // Cache tier and admin on initial sign in
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { subscriptionTier: true, isAdmin: true },
-        })
-        token.tier = dbUser?.subscriptionTier ?? 'FREE'
-        token.isAdmin = dbUser?.isAdmin ?? false
+        token.tier = (user as any).subscriptionTier ?? 'FREE'
+        token.isAdmin = (user as any).isAdmin ?? false
       }
       return token
     },
@@ -91,16 +113,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  events: {
-    async createUser({ user }) {
-      // Auto-create user record in DB on first OAuth sign-in
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          subscriptionTier: 'FREE',
-        },
-      })
-    },
   },
 })
