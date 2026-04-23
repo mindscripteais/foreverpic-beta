@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+.vercel/
+out/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.db-journal
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Sensitive data
+Dati Accesso Servizi.txt
+
+# Backups
+.backups/
+
+# Claude specific
+.claude/
+.openclaude/
+output.txt
+server_err.txt
+server_out.txt

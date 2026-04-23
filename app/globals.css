@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 250 248 245;  /* cream-100 */
+    --surface: 255 255 255;
+    --primary: 255 107 74;      /* coral */
+    --secondary: 201 169 110;   /* gold */
+    --accent: 201 169 110;      /* gold */
+    --text: 26 26 26;           /* charcoal */
+    --muted: 138 122 102;       /* warm-600 */
+  }
+
+  .dark {
+    --background: 26 26 26;     /* charcoal */
+    --surface: 36 36 36;        /* charcoal-300 */
+    --text: 250 248 245;        /* cream-100 */
+    --muted: 196 184 158;       /* warm-400 */
+  }
+
+  body {
+    @apply bg-cream-100 text-charcoal font-sans antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-coral text-white px-5 py-2.5 rounded-xl font-semibold
+           hover:bg-coral/90 transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-coral focus:ring-offset-2
+           shadow-glow hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply bg-warm-200 text-charcoal px-4 py-2.5 rounded-xl font-semibold
+           hover:bg-warm-300 transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-warm-400 focus:ring-offset-2;
+  }
+
+  .btn-accent {
+    @apply bg-gold text-white px-4 py-2.5 rounded-xl font-semibold
+           hover:bg-gold/90 transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2
+           shadow-glow hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .card {
+    @apply bg-cream-100 rounded-2xl shadow-soft p-6
+           border border-warm-300/40;
+  }
+
+  .input {
+    @apply w-full px-4 py-2.5 rounded-xl border border-warm-300
+           focus:outline-none focus:ring-2 focus:ring-coral/50 focus:border-coral
+           placeholder:text-warm-500 transition-all duration-150;
+  }
+
+  .label {
+    @apply block text-sm font-semibold text-charcoal mb-1.5;
+  }
+}

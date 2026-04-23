@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  image             String?
+  passwordHash      String?
+  stripeCustomerId  String?   @unique
+  subscriptionTier  String    @default("FREE")
+  isAdmin           Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  ownedEvents       Event[]   @relation("EventOwner")
+  collaborations    Event[]   @relation("EventCollaborators")
+  photos            Photo[]
+  reactions         Reaction[]
+  votes             Vote[]
+  subscriptions     Subscription[]
+  emailLogs         EmailLog[]
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  stripeSubscriptionId String   @unique
+  stripeCustomerId     String
+  tier                 String
+  currentPeriodEnd     DateTime
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id])
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model Event {
+  id           String    @id @default(cuid())
+  name         String
+  description  String?
+  date         DateTime
+  coverImage   String?
+  privacy      String    @default("PUBLIC")
+  qrToken      String    @unique @default(cuid())
+  qrExpiresAt  DateTime?
+  storageLimit Int       @default(536870912)
+  views        Int       @default(0)
+  autoDeleteAt DateTime?
+  ownerId      String
+  owner        User      @relation("EventOwner", fields: [ownerId], references: [id])
+  collaborators User[]   @relation("EventCollaborators")
+  photos        Photo[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Photo {
+  id             String    @id @default(cuid())
+  url            String
+  thumbnail      String
+  key            String    @unique
+  size           Int
+  width          Int
+  height         Int
+  eventId        String
+  event          Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  uploaderId     String?
+  uploader       User?     @relation(fields: [uploaderId], references: [id])
+  guestName      String?
+  reactions      Reaction[]
+  votes          Vote[]
+  createdAt      DateTime  @default(now())
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  type      String
+  userId    String
+  photoId   String
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, photoId, type])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  userId    String
+  photoId   String
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, photoId])
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  sentAt    DateTime @default(now())
+}

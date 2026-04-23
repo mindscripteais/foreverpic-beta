@@ -1,0 +1,271 @@
+PROJECT PROGRESS LOG — EventShare
+
+[START]
+2026-04-20 — Progetto inizializzato.
+
+[2026-04-21] — OTTIMIZZAZIONE MEMORIA
+Problema: Next.js 16.2.4 con Turbopack causava eccessivo RAM usage durante dev.
+
+Azioni intraprese:
+1. Semplificato next.config.js - rimosso configurazioni non valide
+2. Rimossi .next/dev/types da tsconfig.json include (Next.js lo re-aggiunge automaticamente)
+3. lib/auth.ts: caching tier in JWT token per evitare DB query ogni request
+4. Corretto import duplicati in signin/page.tsx
+5. Rimosso modularizeImports per lucide-react (causava build error)
+6. Rinominato middleware.ts -> proxy.ts (deprecazione Next.js 16)
+7. Build verificato: passa in 3.4s
+8. Dev server avviato: risponde sulla porta 3000
+
+OSSERVAZIONI:
+- Next.js 16 usa Turbopack di default e NON supporta --no-turbopack per disabilitarlo
+- Turbopack è la causa principale dell'elevato RAM usage
+- Non c'è modo semplice di tornare a webpack in Next.js 16
+- L'unica opzione sarebbe downgradare a Next.js 15
+
+STATO ATTUALE:
+- Build: OK
+- Dev server: AVVIATO su http://localhost:3000
+- Monitorare RAM usage durante uso prolungato
+
+[2026-04-21] — UI IMPROVEMENTS
+Miglioramenti al design applicati:
+
+1. FIX: Duplicate import in signup/page.tsx (lucide-react)
+2. Dashboard redesign:
+   - Header con visual hierarchy migliorata
+   - Stats cards con icone colorate e gradient backgrounds
+   - Empty state con illustrazione e CTA più prominente
+   - Better loading state
+3. Settings redesign:
+   - Usa Sidebar come dashboard (invece di header custom)
+   - Subscription cards con gradient backgrounds e icone distintive
+   - Piano "Most Popular" badge su Pro
+   - Visual hierarchy migliorata per pricing
+4. Public Gallery redesign:
+   - Hero section con gradient e decorative blur
+   - Stats con design più moderno (numeri più grandi, icone colorate)
+   - Upload CTA con gradient border e migliore animazione
+   - Empty state con illustrazione
+   - Better loading state
+5. EventCard improvements:
+   - Hover effects migliorati (scale, translate-y)
+   - Quick action buttons visibili su hover
+   - Storage indicator con colori dinamici (verde/giallo/rosso)
+   - Menu dropdown con animazioni e feedback visivo
+   - Copy link con feedback "Copied!" verde
+
+BUILD STATUS: ✅ PASSING
+
+[DEBUG 2026-04-21] — EVENT PAGES INVESTIGATION
+Problema: Gallerie non si aprono o si bloccano
+
+Analisi fatta:
+1. tRPC event.get restituisce dati corretti per eventi reali
+2. Database SQLite ha eventi con ID reali (es: cmo751hz20004p1kpv6tejbah)
+3. La pagina mostra "Loading gallery..." che significa:
+   - SSR: Loading spinner appare
+   - Client: tRPC query parte ma non completa il render
+
+4. Il problema è che la pagina SSR rendersa il loading state,
+   ma il client hydration + tRPC fetch non completano
+
+Struttura confermata:
+- /events/[eventId] - Public gallery (funziona con tRPC publicProcedure)
+- /manage/[eventId] - Protected gallery (richiede auth + ownership)
+- QR generate funziona via tRPC
+- PhotoGrid e PhotoLightbox componenti presenti
+
+Il bug potrebbe essere:
+1. Race condition nel trpc-provider (staleTime 5s)
+2. Query che non si completano dopo hydration
+3. Error handling che mostra "Gallery Not Found" invece del contenuto
+
+[2026-04-23] — SECURITY & BUG FIXES
+Analisi completa del codice e fix applicati:
+
+1. FIX CRITICO: Creato middleware.ts con protezione route autenticate.
+   - Rimosso proxy.ts inutile (conflitto con middleware)
+   - Route /dashboard, /settings, /manage, /events ora protette a livello server
+2. FIX CRITICO: Controllo privacy in event.get
+   - Eventi PRIVATE/INVITE_ONLY visibili solo a owner/collaborators
+   - Eventi PUBLIC accessibili a tutti
+3. FIX CRITICO: Controllo accesso in vote.cast e reaction.add
+   - Solo utenti con accesso all'evento possono votare/reagire
+4. FIX CRITICO: Webhook Stripe corretto
+   - Usato stripe.subscriptions.retrieve() per current_period_end
+   - createCheckoutSession ora riutilizza customer esistente (no duplicati)
+5. FIX CRITICO: Guest upload implementato
+   - Schema: uploaderId reso nullable, aggiunto guestName
+   - Nuove API: getGuestUploadUrl, confirmGuestUpload (publicProcedure)
+   - UploadZone aggiornato con lettura dimensioni reali immagini
+   - Pagina pubblica supporta upload anonimo con richiesta nome
+6. FIX: EventCard storage hardcoded → usa formatBytes(storageLimit)
+7. FIX: Modal ora gestisce tasto Escape
+8. FIX: Settings testo upgrade/downgrade corretto
+9. FIX: Aggregazioni SQL per storage usage (user.me)
+10. FIX: event.get limitato a 50 foto (evita query pesanti)
+11. FIX: Rimossi @types/react e @types/react-dom (conflitto con React 19)
+
+BUILD STATUS: ✅ PASSING (Next.js 16.2.4 + Turbopack)
+
+[2026-04-23] — REAL-TIME, UI & ANALYTICS FIXES
+
+1. FIX: Real-time Pusher sul frontend
+   - Creato hook `usePusher` in `hooks/usePusher.ts`
+   - Integrato in `/events/[eventId]` e `/manage/[eventId]`
+   - Invalida query `event.get` quando arrivano eventi photo-added/reaction/vote
+2. FIX: Palette colori uniformata
+   - Pagina `/events`: slate-* → cream/warm/charcoal
+   - Pagina `/settings`: slate-* → cream/warm/charcoal
+   - Pagina `/manage/[eventId]`: slate-* → cream/warm/charcoal
+   - App coerente con un unico design system
+3. FIX: View count deduplicazione
+   - Cookie `eventshare_views` con TTL 24h
+   - Incrementa views solo se l'evento non è stato visitato nelle ultime 24 ore
+
+BUILD STATUS: ✅ PASSING
+
+[2026-04-23] — FULL ITALIAN TRANSLATION
+
+1. NEW: Intera applicazione tradotta in italiano (14 file)
+   - Pagine: dashboard, events, settings, manage, public gallery, signin, signup, landing
+   - Componenti: Sidebar, EventCard, CreateEventModal, EventCreatedModal, UploadZone, QRUploader, PhotoLightbox
+   - Testi tradotti: label, placeholder, titoli, descrizioni, bottoni, messaggi errore, toast
+   - Prezzi in EUR (€) invece di $
+   - Privacy badges: Public→Pubblico, Private→Privato, Invite→Su invito
+   - Statistiche, storage, reazioni, voti, visualizzazioni tradotti
+   - Auth: Bentornato, Registrati, Accedi, Password dimenticata?
+2. BUILD: Next.js 16.2.4 + Turbopack compila senza errori
+
+BUILD STATUS: ✅ PASSING
+
+[2026-04-23] — FIX Create Event button
+Problema: Il tasto "Create Event" nel modal non funzionava.
+
+Analisi:
+1. Il form aveva `required` sugli input che poteva bloccare il submit in modo invisibile
+2. Il bottone aveva sia `type="submit"` che `onClick` che potevano interferire
+3. Il middleware matcher non escludeva `/api`, causando potenziali problemi con tRPC
+
+Fix applicati:
+1. Aggiunto `noValidate` al form per disabilitare validazione HTML5 nativa
+2. Rimosso `required` dagli input del modal
+3. Rimosso `onClick` dal bottone "Create Event", lasciando solo il form `onSubmit`
+4. Fixato middleware matcher per escludere `/api` dalle route protette
+
+BUILD STATUS: ✅ PASSING
+
+[2026-04-23] — QR CODE AUTO-GENERATION AFTER EVENT CREATION
+
+1. FIX: QRUploader usava fetch manuale con formato input tRPC sbagliato
+   -> Riscritto per usare `trpc.qr.generate.useQuery()` (affidabile)
+2. NEW: EventCreatedModal mostra QR code subito dopo creazione evento
+   -> Appare automaticamente nel dashboard con QR, link, download
+   -> L'utente puo' condividere immediatamente senza navigare in manage
+3. UX: Dopo "Create Event", il modal QR appare con:
+   - QR code SVG visibile
+   - Download PNG/SVG
+   - Copy gallery link
+   - Bottone "Go to Event Dashboard"
+
+BUILD STATUS: ✅ PASSING
+
+[2026-04-23] — STICKY QR SIDEBAR IN MANAGE PAGE
+
+1. FIX: Sidebar in /manage/[eventId] ora e' sticky (rimane visibile durante lo scroll)
+2. UI: QR card wrappato in un container prominente con:
+   - Gradient background (coral -> gold)
+   - Bordo coral/20 con shadow-glow
+   - Titolo "Share QR Code" con icona
+   - Sempre visibile a lato mentre si scrollano le foto
+
+BUILD STATUS: ✅ PASSING
+
+[2026-04-23] — HOMEPAGE LANDING PAGE REDESIGN
+
+1. NEW: Riscritta homepage come landing page completa e animata
+   - Sezioni: Hero, Demo Gallery, Features, How it works, Testimonials, Pricing, CTA, Footer
+   - Hook `useInView` per reveal animations al scroll (IntersectionObserver, no librerie esterne)
+   - Componente `Reveal` per staggered entrance animations
+   - `AnimatedCounter` per numeri che contano fino al target
+   - Effetti hover elaborati su cards (translate-y, scale, rotate, shadow)
+   - Floating shapes animate nell'hero (animate-float, animate-pulse-soft)
+   - Social proof con avatar stack e counters animati
+   - Palette colori coerente (coral/gold/cream/warm/charcoal)
+2. NEW: Sezione Demo Gallery sostituita con Polaroid Scatter
+   - 6 polaroid stile foto fisiche con bordo bianco, ombre realistiche, rotazioni casuali
+   - Ogni polaroid ha un gradiente unico + icona centrale (Heart, PartyPopper, Cake, Camera, Palmtree, Briefcase)
+   - Al hover: si raddrizzano, scalano 1.1x, portano in primo piano (z-index 50), shine effect
+   - Badge centrale fluttuante "Scansiona per caricare" con QR icon
+   - Background a doppio layer con bordi arrotondati per profondità
+3. NEW: Landing page completamente tradotta in italiano
+   - Tutte le sezioni: Hero, Features, Come funziona, Testimonianze, Prezzi, CTA, Footer
+   - Metadata (title, description, keywords) in italiano
+   - Prezzi in EUR (€) con copy italiano
+   - Build OK
+
+BUILD STATUS: ✅ PASSING
+
+[2026-04-23] — BETA INFRASTRUCTURE & FEATURES
+
+1. INFRASTRUCTURE:
+   - Neon PostgreSQL: schema migrato da SQLite, migration applicata
+   - Env vars: tutte le credenziali reali configurate (Neon, R2, Google, Stripe, Pusher, Resend)
+   - Prisma provider cambiato da sqlite a postgresql
+   - Aggiunti campi: isAdmin (User), autoDeleteAt (Event), EmailLog model
+
+2. AUTO-CANCELLAZIONE (7gg per tutti in beta):
+   - event.create imposta autoDeleteAt = now + 7 giorni
+   - API /api/cron/cleanup cancella eventi/foto scaduti da R2 e DB
+   - vercel.json configura cron giornaliero alle 3 AM
+   - CRON_SECRET per proteggere endpoint
+
+3. SOCIAL SHARING:
+   - Web Share API (navigator.share) su mobile
+   - WhatsApp share link
+   - Copy link con feedback "Copiato!"
+   - Pulsanti nella hero della gallery pubblica
+
+4. DOWNLOAD PROTETTO:
+   - API getDownloadUrls già protetta (solo owner/collaborator)
+   - UI: bottone "Scarica" visibile solo all'owner nella gallery pubblica
+
+5. GDPR + LEGALE:
+   - Cookie banner con Accetta/Rifiuta + link Privacy
+   - Pagina /terms — Termini di Servizio
+   - Pagina /privacy — Privacy Policy
+
+6. DASHBOARD ADMIN BETA (/beta-ops):
+   - Path nascosto, nessun link in UI
+   - Protezione: solo user con isAdmin=true (hardcoded email: mindscript.eais@gmail.com)
+   - Sezioni: Overview (stats globali), Utenti, Eventi, Foto (grid thumbnail), Attività
+   - Azioni: elimina evento, elimina foto singola
+   - UI dark theme per distinguerla dall'app
+   - Non loggati → redirect /signin. Loggati non admin → "Pagina non trovata"
+
+7. BUILD: Next.js 16.2.4 + Turbopack compila senza errori
+   - Route /beta-ops generata
+   - Route /terms e /privacy generate
+   - Route /api/cron/cleanup aggiunta
+
+BUILD STATUS: ✅ PASSING
+
+[TODO POST-DEPLOY]
+- Email welcome con Resend
+- Rate limiting API
+- Open Graph meta per social preview
+- Copertina evento personalizzabile
+- Stripe Price ID (al momento Product ID)
+
+[NOTE DEPLOY]
+- Postinstall script aggiunto: prisma generate
+- Vercel env vars necessarie: tutte quelle in .env.local + CRON_SECRET
+- Stripe webhook endpoint su Vercel: /api/webhooks/stripe
+
+[NOTES]
+- Stack: Next.js 16, tRPC, Prisma, Neon PostgreSQL, R2, Stripe, NextAuth v5, Pusher
+- Differentiator vs Celebrate: no watermark Pro, real-time, collaborative uploads
+- Storage tiers: Free 500MB/evento, Pro 5GB, Enterprise 50GB
+- Beta: tutti gli eventi auto-cancellano dopo 7 giorni
+- UI: Modern editorial, Linear/Notion-inspired design
+- Deprecation warning: Next.js 16 suggerisce `proxy` al posto di `middleware`, ma funziona
