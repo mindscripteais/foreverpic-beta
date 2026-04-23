@@ -266,8 +266,29 @@ BUILD STATUS: ✅ PASSING
 3. Env vars configurate su Vercel (24 variabili):
    - Neon DB, NextAuth, Google OAuth, Stripe, R2, Pusher, Resend, CRON_SECRET
 
+[2026-04-23] — FIX UPLOAD FOTO (CORS R2)
+
+Problema: Upload foto falliva in produzione (PUT diretto a R2 bloccato da CORS).
+
+Fix applicati:
+1. Creato endpoint server-side /api/upload/route.ts
+   - Riceve file via FormData multipart
+   - Carica su R2 con S3Client server-side (evita CORS)
+   - Verifica accesso all'evento (owner/collaborator/public)
+   - Restituisce publicUrl
+2. Aggiornato UploadZone:
+   - Upload tramite XMLHttpRequest POST a /api/upload
+   - Progress tracking funzionante (30% -> 90%)
+   - Rimosso fallback base64 (non più necessario)
+   - Rimosso PUT diretto a presigned URL
+3. Backend tRPC:
+   - confirmUpload/confirmGuestUpload: dataUrl rimosso dal client (optional)
+   - getUploadUrl/getGuestUploadUrl: usati solo per key + limit check
+
+BUILD STATUS: ✅ PASSING
+
 [TODO POST-DEPLOY]
-- Test registrazione + creazione evento + upload
+- Test registrazione + creazione evento + upload end-to-end
 - Email welcome con Resend
 - Rate limiting API
 - Open Graph meta per social preview
@@ -279,6 +300,7 @@ BUILD STATUS: ✅ PASSING
 - Cron job: /api/cron/cleanup (3 AM giornaliero)
 - Stripe webhook endpoint: /api/webhooks/stripe
 - Admin dashboard: /beta-ops (nascosto)
+- Upload endpoint: /api/upload (server-side R2 upload)
 
 [NOTES]
 - Stack: Next.js 16, tRPC, Prisma, Neon PostgreSQL, R2, Stripe, NextAuth v5, Pusher

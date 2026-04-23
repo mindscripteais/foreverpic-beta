@@ -67,8 +67,8 @@ export function UploadZone({ eventId, onUploadComplete, maxSize = 20 * 1024 * 10
     try {
       const dims = await getImageDimensions(uf.file)
 
-      // Get presigned URL (or local upload flag)
-      let uploadUrl: string | null, key: string, publicUrl: string | null, localUpload: boolean
+      // Get upload key and validate limits
+      let key: string
       if (guestMode) {
         const res = await getGuestUploadUrl.mutateAsync({
           eventId,
@@ -76,10 +76,7 @@ export function UploadZone({ eventId, onUploadComplete, maxSize = 20 * 1024 * 10
           contentType: uf.file.type,
           size: uf.file.size,
         })
-        uploadUrl = res.uploadUrl
         key = res.key
-        publicUrl = res.publicUrl
-        localUpload = res.localUpload
       } else {
         const res = await getUploadUrl.mutateAsync({
           eventId,
@@ -87,61 +84,48 @@ export function UploadZone({ eventId, onUploadComplete, maxSize = 20 * 1024 * 10
           contentType: uf.file.type,
           size: uf.file.size,
         })
-        uploadUrl = res.uploadUrl
         key = res.key
-        publicUrl = res.publicUrl
-        localUpload = res.localUpload
       }
 
       setUploading((prev) =>
         prev.map((f) => (f.id === uf.id ? { ...f, progress: 30 } : f))
       )
 
-      let dataUrl: string | undefined
+      // Upload to R2 via server-side API (avoids CORS issues)
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        const formData = new FormData()
+        formData.append('file', uf.file)
+        formData.append('eventId', eventId)
+        formData.append('key', key)
+        if (guestName) formData.append('guestName', guestName)
 
-      if (localUpload) {
-        // Local upload: convert file to base64 data URL
-        dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve(reader.result as string)
-          reader.onerror = () => reject(new Error('Impossibile leggere il file'))
-          reader.readAsDataURL(uf.file)
-        })
-        // Simulate progress for local upload
-        for (let p = 30; p <= 90; p += 20) {
-          setUploading((prev) =>
-            prev.map((f) => (f.id === uf.id ? { ...f, progress: p } : f))
-          )
-          await new Promise((r) => setTimeout(r, 50))
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = 30 + (e.loaded / e.total) * 60
+            setUploading((prev) =>
+              prev.map((f) => (f.id === uf.id ? { ...f, progress: pct } : f))
+            )
+          }
         }
-      } else {
-        // Upload to R2 via XHR for progress tracking
-        await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest()
 
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-              const pct = 30 + (e.loaded / e.total) * 60
-              setUploading((prev) =>
-                prev.map((f) => (f.id === uf.id ? { ...f, progress: pct } : f))
-              )
-            }
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve()
+          } else {
+            let msg = `Upload failed: ${xhr.status}`
+            try {
+              const data = JSON.parse(xhr.responseText)
+              if (data.error) msg = data.error
+            } catch {}
+            reject(new Error(msg))
           }
+        }
 
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve()
-            } else {
-              reject(new Error(`Upload failed: ${xhr.status}`))
-            }
-          }
-
-          xhr.onerror = () => reject(new Error('Network error'))
-          xhr.open('PUT', uploadUrl!)
-          xhr.setRequestHeader('Content-Type', uf.file.type)
-          xhr.send(uf.file)
-        })
-      }
+        xhr.onerror = () => reject(new Error('Network error'))
+        xhr.open('POST', '/api/upload')
+        xhr.send(formData)
+      })
 
       setUploading((prev) =>
         prev.map((f) => (f.id === uf.id ? { ...f, progress: 90 } : f))
@@ -160,7 +144,6 @@ export function UploadZone({ eventId, onUploadComplete, maxSize = 20 * 1024 * 10
           width: dims.width || 1200,
           height: dims.height || 1200,
           guestName,
-          dataUrl,
         })
       } else {
         result = await confirmUpload.mutateAsync({
@@ -169,7 +152,6 @@ export function UploadZone({ eventId, onUploadComplete, maxSize = 20 * 1024 * 10
           size: uf.file.size,
           width: dims.width || 1200,
           height: dims.height || 1200,
-          dataUrl,
         })
       }
 

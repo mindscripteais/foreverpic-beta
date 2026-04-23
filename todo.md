@@ -1,78 +1,34 @@
-# TODO — EventShare
+# TODO — ForeverPic (Beta)
 
 ## Stato Complessivo (2026-04-23)
-Fasi 1-9 completate. Build OK. Landing page animata completata.
-Rimangono: README, dark mode, mobile testing intensivo, polish finale.
+Deploy su Vercel production: https://foreverpic-beta.vercel.app
+Build OK. Upload fixato (server-side R2). Rimangono test end-to-end e polish.
 
-## Fase 1 — Setup & Config
-- [ ] Inizializzare Next.js 14 con App Router
-- [ ] Configurare TailwindCSS + design tokens
-- [ ] Setup Prisma + schema database
-- [ ] Configurare NextAuth v5
-- [ ] Setup Stripe (test mode)
-- [ ] Configurare Cloudflare R2 (presigned URLs)
-- [ ] Setup tRPC
+## Fasi Completate
+- [x] Setup Next.js 16 + Turbopack + Tailwind + tRPC + Prisma + Neon PostgreSQL
+- [x] NextAuth v5 (OAuth Google + credentials)
+- [x] Stripe (test mode) + webhook + checkout + tier enforcement
+- [x] Cloudflare R2 storage + server-side upload API
+- [x] Pusher real-time (photo added, reactions, votes)
+- [x] Landing page italiana animata (7 sezioni)
+- [x] Dashboard, event management, public gallery, manage page
+- [x] QR code generation + download PNG/SVG
+- [x] Photo upload con progress + server-side R2
+- [x] Reactions, voting, lightbox, masonry grid
+- [x] Auto-cancellazione 7gg (cron giornaliero)
+- [x] GDPR cookie banner + /terms + /privacy
+- [x] Admin dashboard nascosta (/beta-ops)
+- [x] Social sharing (Web Share, WhatsApp, copy link)
+- [x] Download protetto (solo owner)
 
-## Fase 2 — Auth
-- [ ] Register page + API
-- [ ] Signin page + API
-- [ ] OAuth Google provider
-- [ ] Protected routes middleware
-- [ ] User profile page
-
-## Fase 3 — Event Management
-- [ ] Create event page + API
-- [ ] List events dashboard
-- [ ] Event detail/manage page
-- [ ] Update event API
-- [ ] Delete event API
-- [ ] Collaborator invite system
-
-## Fase 4 — QR Code
-- [ ] QR generation API (qrcode library)
-- [ ] QR download PNG
-- [ ] QR download PDF (with template)
-- [ ] QR expiration logic
-
-## Fase 5 — Photo Upload
-- [ ] Presigned URL API (R2)
-- [ ] Client-side upload component
-- [ ] Progress tracking
-- [ ] EXIF strip (sharp)
-- [ ] Thumbnail generation
-- [ ] Storage limit enforcement
-- [ ] Watermark overlay (free tier)
-
-## Fase 6 — Gallery
-- [ ] Public gallery page
-- [ ] Masonry grid layout
-- [ ] Lightbox viewer
-- [ ] Reactions API + UI
-- [ ] Best photo voting
-- [ ] Infinite scroll pagination
-
-## Fase 7 — Real-time
-- [ ] Pusher setup
-- [ ] Photo added events
-- [ ] Reaction update events
-- [ ] Live vote count
-
-## Fase 8 — Dashboard & Analytics
-- [ ] Dashboard page
-- [ ] Event stats (views, photos, reactions)
-- [ ] Storage usage indicator
-- [ ] QR download stats
-
-## Fase 9 — Stripe Subscription
-- [ ] Pricing page
-- [ ] Stripe Checkout integration
-- [ ] Webhook handler (create, update, delete)
-- [ ] Subscription status page
-- [ ] Tier enforcement
-
-## Fase 10 — Polish & Docs
+## Post-Deploy TODO
+- [ ] Test end-to-end: registrazione → creazione evento → upload foto → gallery pubblica
+- [ ] Email welcome con Resend dopo registrazione
+- [ ] Rate limiting API (tRPC + Next.js)
+- [ ] Open Graph meta tags per social preview
+- [ ] Copertina evento personalizzabile
+- [ ] Stripe Price ID live (al momento Product ID in test)
 - [ ] README.md completo
-- [ ] Error handling full
-- [ ] Loading states + skeletons
-- [ ] Dark mode support
-- [ ] Mobile responsive testing
+- [ ] Dark mode toggle
+- [ ] Mobile responsive testing intensivo
+- [ ] Polish UI finale (skeleton loaders, error boundaries)
