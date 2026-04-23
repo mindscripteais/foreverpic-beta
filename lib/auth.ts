@@ -57,30 +57,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub
-        // Always refresh tier and admin from DB using email
-        if (session.user.email) {
-          const dbUser = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { subscriptionTier: true, isAdmin: true },
-          })
-          if (dbUser) {
-            token.tier = dbUser.subscriptionTier
-            token.isAdmin = dbUser.isAdmin
-          }
-        }
         session.user.subscriptionTier = (token.tier as string) ?? 'FREE'
         session.user.isAdmin = (token.isAdmin as boolean) ?? false
       }
       return session
     },
-    async jwt({ token, user, account }) {
-      if (user && account?.provider === 'google') {
-        // OAuth login — find or create user by email
-        if (user.email) {
+    async jwt({ token, user }) {
+      try {
+        if (user?.email) {
           let dbUser = await prisma.user.findUnique({
             where: { email: user.email },
             select: { id: true, subscriptionTier: true, isAdmin: true },
           })
+
           if (!dbUser) {
             dbUser = await prisma.user.create({
               data: {
@@ -93,15 +82,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               select: { id: true, subscriptionTier: true, isAdmin: true },
             })
           }
+
           token.sub = dbUser.id
           token.tier = dbUser.subscriptionTier
           token.isAdmin = dbUser.isAdmin
         }
-      } else if (user) {
-        // Credentials login
-        token.sub = user.id
-        token.tier = (user as any).subscriptionTier ?? 'FREE'
-        token.isAdmin = (user as any).isAdmin ?? false
+      } catch (e) {
+        console.error('Auth JWT error:', e)
       }
       return token
     },
@@ -112,6 +99,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
 })
