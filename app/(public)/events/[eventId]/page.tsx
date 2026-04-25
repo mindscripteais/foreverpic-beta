@@ -166,23 +166,38 @@ export default function EventGalleryPage() {
 
       {/* Event Hero */}
       <section className="relative overflow-hidden">
-        {/* Decorative background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-coral/5 via-transparent to-gold/5 pointer-events-none" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-coral/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+        {/* Cover image background */}
+        {event.coverImage && (
+          <div className="absolute inset-0">
+            <img
+              src={event.coverImage}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-charcoal/60 backdrop-blur-[2px]" />
+          </div>
+        )}
+        {/* Decorative background (fallback when no cover) */}
+        {!event.coverImage && (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-coral/5 via-transparent to-gold/5 pointer-events-none" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-coral/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+          </>
+        )}
 
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-cream-100 rounded-full shadow-soft border border-warm-300/50 mb-6">
+        <div className={`relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center ${event.coverImage ? 'text-white' : ''}`}>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full shadow-soft border mb-6 ${event.coverImage ? 'bg-white/10 border-white/20' : 'bg-cream-100 border-warm-300/50'}`}>
             <span className="w-2 h-2 bg-success rounded-full animate-pulse-soft" />
-            <span className="text-sm font-medium text-warm-700">Galleria live</span>
+            <span className={`text-sm font-medium ${event.coverImage ? 'text-white/90' : 'text-warm-700'}`}>Galleria live</span>
           </div>
 
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-charcoal mb-4">
+          <h1 className={`font-display text-4xl md:text-5xl font-bold mb-4 ${event.coverImage ? 'text-white' : 'text-charcoal'}`}>
             {event.name}
           </h1>
 
-          <p className="text-warm-600 flex items-center justify-center gap-3 text-base">
+          <p className={`flex items-center justify-center gap-3 text-base ${event.coverImage ? 'text-white/80' : 'text-warm-600'}`}>
             <span>{formatDate(event.date)}</span>
-            <span className="w-1 h-1 bg-warm-400 rounded-full" />
+            <span className={`w-1 h-1 rounded-full ${event.coverImage ? 'bg-white/50' : 'bg-warm-400'}`} />
             <span>Organizzato da {event.owner?.name || 'Anonimo'}</span>
           </p>
 

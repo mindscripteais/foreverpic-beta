@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, QrCode, Settings, Upload, Trash2, Download, Loader2 } from 'lucide-react'
+import { ArrowLeft, QrCode, Settings, Upload, Trash2, Download, Loader2, Image as ImageIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout'
@@ -24,6 +24,14 @@ export default function ManageEventPage() {
   const router = useRouter()
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [coverUploading, setCoverUploading] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement>(null)
+
+  const updateEvent = trpc.event.update.useMutation({
+    onSuccess: () => {
+      utils.event.get.invalidate({ id: eventId })
+    },
+  })
 
   const { data: event, isLoading: eventLoading } = trpc.event.get.useQuery(
     { id: eventId },
@@ -113,6 +121,28 @@ export default function ManageEventPage() {
     }
   }
 
+  const handleCoverUpload = async (file: File) => {
+    if (!file || !eventId) return
+    setCoverUploading(true)
+    try {
+      const key = `events/${eventId}/cover`
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('eventId', eventId)
+      formData.append('key', key)
+
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Upload failed')
+
+      updateEvent.mutate({ id: eventId, coverImage: data.url })
+    } catch (err: any) {
+      alert('Errore caricamento copertina: ' + err.message)
+    } finally {
+      setCoverUploading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-cream-100 flex">
       <Sidebar user={{
@@ -191,6 +221,55 @@ export default function ManageEventPage() {
 
           {/* Sidebar */}
           <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
+            {/* Cover Image */}
+            <div className="bg-cream-100 rounded-2xl border border-warm-300/40 overflow-hidden">
+              <div className="px-6 py-4 border-b border-warm-300/40">
+                <h2 className="font-semibold text-charcoal flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-coral" />
+                  Copertina
+                </h2>
+              </div>
+              <div className="p-4">
+                {event.coverImage ? (
+                  <div className="relative group">
+                    <img
+                      src={event.coverImage}
+                      alt="Copertina evento"
+                      className="w-full h-40 object-cover rounded-xl"
+                    />
+                    <button
+                      onClick={() => coverInputRef.current?.click()}
+                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-sm font-medium rounded-xl transition-opacity"
+                    >
+                      Cambia
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => coverInputRef.current?.click()}
+                    className="w-full h-40 border-2 border-dashed border-warm-300 rounded-xl flex flex-col items-center justify-center text-warm-500 hover:border-coral hover:text-coral transition-colors"
+                  >
+                    <ImageIcon className="w-8 h-8 mb-2" />
+                    <span className="text-sm font-medium">Aggiungi copertina</span>
+                  </button>
+                )}
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleCoverUpload(file)
+                    e.target.value = ''
+                  }}
+                />
+                {coverUploading && (
+                  <p className="text-xs text-warm-500 mt-2 text-center">Caricamento...</p>
+                )}
+              </div>
+            </div>
+
             {/* QR — Always visible sticky card */}
             <div className="bg-gradient-to-br from-coral/5 via-white to-gold/5 rounded-2xl border-2 border-coral/20 shadow-glow overflow-hidden">
               <div className="px-6 py-4 border-b border-coral/10 bg-white/50">

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, QrCode, Zap, Shield, Users, Download, Heart, Camera, Star, Sparkles, ChevronRight, PartyPopper, Cake, Briefcase, Palmtree } from 'lucide-react'
 import { Logo, LogoIcon } from '@/components/ui'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useInView } from '@/hooks/useInView'
 
 function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
@@ -62,6 +63,7 @@ export default function HomePage() {
               <Link href="#pricing" className="text-warm-600 hover:text-charcoal text-sm font-medium transition-colors">Prezzi</Link>
               <Link href="/signin" className="text-warm-600 hover:text-charcoal text-sm font-medium transition-colors">Accedi</Link>
             </nav>
+            <ThemeToggle />
             <Link href="/signup" className="inline-flex items-center gap-2 bg-coral text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-glow hover:bg-coral/90 transition-all hover:scale-[1.02] active:scale-[0.98]">
               Inizia ora
             </Link>
@@ -406,6 +408,53 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Storage Calculator */}
+      <section className="py-24 px-4">
+        <div className="max-w-4xl mx-auto">
+          <Reveal>
+            <div className="text-center mb-12">
+              <h2 className="font-display text-3xl md:text-4xl font-bold text-charcoal mb-4">Quanto puoi caricare?</h2>
+              <p className="text-warm-600 text-lg max-w-2xl mx-auto">
+                Fai una stima rapida in base alla qualità delle tue foto.
+              </p>
+            </div>
+          </Reveal>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { label: 'Foto basic', mb: 2, desc: 'Social / chat' },
+              { label: 'Foto alta qualità', mb: 5, desc: 'Smartphone moderno' },
+              { label: 'Foto professionale', mb: 12, desc: 'RAW / Pro camera' },
+            ].map((quality) => {
+              const freePhotos = Math.floor(500 / quality.mb)
+              const proPhotos = Math.floor(5120 / quality.mb)
+              return (
+                <Reveal key={quality.label} delay={100}>
+                  <div className="bg-cream-100 rounded-2xl border border-warm-300/40 p-6 text-center">
+                    <p className="text-sm font-medium text-warm-500 mb-1">{quality.desc}</p>
+                    <p className="text-lg font-semibold text-charcoal mb-4">{quality.label}</p>
+                    <div className="flex items-center justify-center gap-4 mb-4">
+                      <div className="text-center">
+                        <p className="text-3xl font-bold font-display text-coral">{freePhotos.toLocaleString()}</p>
+                        <p className="text-xs text-warm-500">foto (Free)</p>
+                      </div>
+                      <div className="w-px h-10 bg-warm-300" />
+                      <div className="text-center">
+                        <p className="text-3xl font-bold font-display text-gold">{proPhotos.toLocaleString()}</p>
+                        <p className="text-xs text-warm-500">foto (Pro)</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-warm-400">~{quality.mb} MB a foto</p>
+                  </div>
+                </Reveal>
+              )
+            })}
+          </div>
+          <p className="text-center text-sm text-warm-500 mt-8">
+            I calcoli sono approssimativi. La dimensione reale dipende dal dispositivo e dalle impostazioni.
+          </p>
+        </div>
+      </section>
+
       {/* Pricing */}
       <section id="pricing" className="py-24 px-4 bg-warm-100/50">
         <div className="max-w-7xl mx-auto">
@@ -427,6 +476,7 @@ export default function HomePage() {
                 <ul className="space-y-3 mb-8">
                   {[
                     { check: true, text: '500MB di spazio per evento' },
+                    { check: true, text: '~100 foto ad alta qualità' },
                     { check: true, text: '3 eventi al mese' },
                     { check: true, text: 'QR code base' },
                     { check: false, text: 'Filigrana sulle foto' },
@@ -458,6 +508,7 @@ export default function HomePage() {
                 <ul className="space-y-3 mb-8">
                   {[
                     { check: true, text: '5GB di spazio per evento' },
+                    { check: true, text: '~1.000 foto ad alta qualità' },
                     { check: true, text: 'Eventi illimitati' },
                     { check: true, text: 'Nessuna filigrana' },
                     { check: true, text: '5 collaboratori' },
