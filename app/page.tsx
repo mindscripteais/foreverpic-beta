@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { ArrowRight, QrCode, Zap, Shield, Users, Download, Heart, Camera, Star, Sparkles, ChevronRight, Smartphone, ScanLine, Images, Menu, X } from 'lucide-react'
 import { useInView } from '@/hooks/useInView'
+import { LoggedInHome } from '@/components/home/LoggedInHome'
 
 function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0)
@@ -49,6 +50,10 @@ export default function HomePage() {
   const { data: session } = useSession()
   const isLoggedIn = !!session?.user
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  if (isLoggedIn) {
+    return <LoggedInHome />
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cream-100 to-white overflow-x-hidden">

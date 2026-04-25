@@ -6,11 +6,13 @@ interface CardProps {
   className?: string
   hover?: boolean
   padding?: 'none' | 'sm' | 'md' | 'lg'
+  onClick?: () => void
 }
 
-export function Card({ children, className, hover = false, padding = 'md' }: CardProps) {
+export function Card({ children, className, hover = false, padding = 'md', onClick }: CardProps) {
   return (
     <div
+      onClick={onClick}
       className={cn(
         'bg-cream-100 rounded-2xl border border-warm-300/60 shadow-soft overflow-hidden',
         hover && 'transition-all duration-300 hover:shadow-card hover:-translate-y-1 cursor-pointer',

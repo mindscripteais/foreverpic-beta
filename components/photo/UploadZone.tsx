@@ -74,6 +74,7 @@ export function UploadZone({ eventId, onUploadComplete, maxSize = 20 * 1024 * 10
   const confirmUpload = trpc.photo.confirmUpload.useMutation()
   const getGuestUploadUrl = trpc.photo.getGuestUploadUrl.useMutation()
   const confirmGuestUpload = trpc.photo.confirmGuestUpload.useMutation()
+  const utils = trpc.useUtils()
 
   const uploadFile = useCallback(async (uf: UploadingFile) => {
     setUploading((prev) =>
@@ -171,6 +172,11 @@ export function UploadZone({ eventId, onUploadComplete, maxSize = 20 * 1024 * 10
           height: dims.height || 1200,
           type: uf.file.type.startsWith('video/') ? 'VIDEO' : 'PHOTO',
         })
+      }
+
+      // Refresh user storage stats
+      if (!guestMode) {
+        utils.user.me.invalidate()
       }
 
       setUploading((prev) =>

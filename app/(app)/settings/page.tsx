@@ -26,7 +26,7 @@ export default function SettingsPage() {
   if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream-100">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="w-8 h-8 animate-spin text-coral" />
       </div>
     )
   }
@@ -68,8 +68,8 @@ export default function SettingsPage() {
       isCurrent: tier === 'PRO',
       isPopular: true,
       icon: Crown,
-      gradient: 'from-primary/5 to-secondary/5',
-      border: 'border-primary/30',
+      gradient: 'from-coral/5 to-gold/5',
+      border: 'border-coral/30',
     },
     ENTERPRISE: {
       name: 'Enterprise',
@@ -81,8 +81,8 @@ export default function SettingsPage() {
       isCurrent: tier === 'ENTERPRISE',
       isPopular: false,
       icon: Building2,
-      gradient: 'from-accent/5 to-amber-50',
-      border: 'border-accent/30',
+      gradient: 'from-gold/5 to-cream-100',
+      border: 'border-gold/30',
     },
   }
 
@@ -122,8 +122,8 @@ export default function SettingsPage() {
             </div>
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
               tier === 'FREE' ? 'bg-warm-100 text-warm-600' :
-              tier === 'PRO' ? 'bg-primary/10 text-primary' :
-              'bg-accent/10 text-accent'
+              tier === 'PRO' ? 'bg-coral/10 text-coral' :
+              'bg-gold/10 text-gold'
             }`}>
               <Shield className="w-4 h-4" />
               Piano {tierDisplayInfo[tier].name}
@@ -145,18 +145,18 @@ export default function SettingsPage() {
                 <div
                   key={tierKey}
                   className={`relative bg-gradient-to-br ${plan.gradient} rounded-2xl border-2 ${plan.border} p-6 transition-all hover:shadow-lg ${
-                    plan.isCurrent ? 'ring-2 ring-primary ring-offset-2' : ''
+                    plan.isCurrent ? 'ring-2 ring-coral ring-offset-2' : ''
                   }`}
                 >
                   {plan.isPopular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-secondary text-white text-xs font-semibold px-4 py-1 rounded-full shadow-lg">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-coral to-gold text-white text-xs font-semibold px-4 py-1 rounded-full shadow-lg">
                       Più popolare
                     </div>
                   )}
 
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      plan.isCurrent ? 'bg-primary text-white' : 'bg-white text-warm-600'
+                      plan.isCurrent ? 'bg-coral text-white' : 'bg-white text-warm-600'
                     }`}>
                       <Icon className="w-6 h-6" />
                     </div>
@@ -174,21 +174,21 @@ export default function SettingsPage() {
                   <ul className="space-y-2 mb-6">
                     {plan.features.map((feature, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-warm-600">
-                        <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <Check className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
                         {feature}
                       </li>
                     ))}
                   </ul>
 
                   {plan.isCurrent ? (
-                    <div className="w-full py-2.5 text-center bg-green-100 text-green-700 rounded-xl text-sm font-medium">
+                    <div className="w-full py-2.5 text-center bg-success/10 text-success rounded-xl text-sm font-medium">
                       Piano attuale
                     </div>
                   ) : (
                     <Button
                       className={`w-full ${
-                        tierKey === 'PRO' ? 'shadow-lg shadow-primary/20' :
-                        tierKey === 'ENTERPRISE' ? 'shadow-lg shadow-accent/20' : ''
+                        tierKey === 'PRO' ? 'shadow-lg shadow-coral/20' :
+                        tierKey === 'ENTERPRISE' ? 'shadow-lg shadow-gold/20' : ''
                       }`}
                       variant={tierKey === 'FREE' ? 'secondary' : tierKey === 'PRO' ? 'primary' : 'accent'}
                       onClick={() => tierKey !== 'FREE' && handleUpgrade(tierKey)}
@@ -222,7 +222,7 @@ export default function SettingsPage() {
               </div>
               <div className="h-2 bg-warm-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-primary to-secondary transition-all"
+                  className="h-full bg-gradient-to-r from-coral to-gold transition-all"
                   style={{
                     width: `${Math.min(100, ((userData?.eventCount || 0) / (limits?.eventsPerMonth || 3)) * 100)}%`
                   }}
@@ -230,12 +230,28 @@ export default function SettingsPage() {
               </div>
             </div>
             <div>
-              <div className="flex justify-between text-sm">
-                <span className="text-warm-600">Spazio usato</span>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-warm-600">Spazio totale usato</span>
                 <span className="font-mono font-medium">
-                  {userData?.totalStorageUsed ? formatBytes(userData.totalStorageUsed) : '0 Bytes'}
+                  {userData?.totalStorageUsed ? formatBytes(userData.totalStorageUsed) : '0 Bytes'} / {userData?.totalStorageLimit ? formatBytes(userData.totalStorageLimit) : '1.5 GB'}
                 </span>
               </div>
+              <div className="h-2 bg-warm-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    (userData?.storagePercent || 0) > 90 ? 'bg-coral' :
+                    (userData?.storagePercent || 0) > 75 ? 'bg-warning' :
+                    (userData?.storagePercent || 0) > 50 ? 'bg-gold' :
+                    'bg-success'
+                  }`}
+                  style={{ width: `${userData?.storagePercent || 0}%` }}
+                />
+              </div>
+              <p className="text-xs text-warm-500 mt-1.5">
+                {(userData?.storagePercent || 0) > 90
+                  ? 'Spazio quasi esaurito! Passa a un piano superiore.'
+                  : `Hai ancora ${formatBytes((userData?.totalStorageLimit || 0) - (userData?.totalStorageUsed || 0))} disponibili.`}
+              </p>
             </div>
             <p className="text-sm text-warm-500 pt-2 border-t border-warm-100">
               {tier === 'FREE' ? 'Passa a Pro per eventi illimitati e più spazio' : 'Goditi i vantaggi del tuo abbonamento!'}

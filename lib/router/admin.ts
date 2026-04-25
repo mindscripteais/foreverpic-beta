@@ -54,7 +54,31 @@ export const adminRouter = createTRPCRouter({
 
       const users = await ctx.prisma.user.findMany({ where, orderBy: { createdAt: 'desc' }, include: { _count: { select: { ownedEvents: true, photos: true } } } })
 
-      return users.map((u) => ({ id: u.id, name: u.name, email: u.email, image: u.image, tier: u.subscriptionTier, isAdmin: u.isAdmin, eventCount: u._count.ownedEvents, photoCount: u._count.photos, createdAt: u.createdAt }))
+      // Get storage used per user in one query
+      const userIds = users.map((u) => u.id)
+      const storageAgg = await ctx.prisma.photo.groupBy({
+        by: ['eventId'],
+        where: { event: { ownerId: { in: userIds } } },
+        _sum: { size: true },
+      })
+
+      // Map eventId -> ownerId
+      const events = await ctx.prisma.event.findMany({
+        where: { ownerId: { in: userIds } },
+        select: { id: true, ownerId: true },
+      })
+      const eventOwnerMap = new Map(events.map((e) => [e.id, e.ownerId]))
+
+      // Aggregate by owner
+      const storageByUser = new Map<string, number>()
+      for (const agg of storageAgg) {
+        const ownerId = eventOwnerMap.get(agg.eventId)
+        if (ownerId) {
+          storageByUser.set(ownerId, (storageByUser.get(ownerId) || 0) + (agg._sum.size || 0))
+        }
+      }
+
+      return users.map((u) => ({ id: u.id, name: u.name, email: u.email, image: u.image, tier: u.subscriptionTier, isAdmin: u.isAdmin, eventCount: u._count.ownedEvents, photoCount: u._count.photos, totalStorage: storageByUser.get(u.id) || 0, createdAt: u.createdAt }))
     }),
 
   events: protectedProcedure

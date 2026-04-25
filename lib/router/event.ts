@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { generateQRToken } from '@/lib/utils'
 import { cookies } from 'next/headers'
 import { rateLimit, rateLimits } from '@/lib/rate-limit'
+import { TIER_LIMITS } from '@/lib/stripe'
 
 export const eventRouter = createTRPCRouter({
   create: protectedProcedure
@@ -100,15 +101,7 @@ export const eventRouter = createTRPCRouter({
         include: {
           owner: { select: { id: true, name: true, image: true } },
           collaborators: { select: { id: true, name: true, image: true } },
-          photos: {
-            include: {
-              reactions: { select: { type: true, userId: true } },
-              votes: { select: { userId: true } },
-              uploader: { select: { id: true, name: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 50,
-          },
+          _count: { select: { photos: true } },
         },
       })
 
@@ -231,5 +224,63 @@ export const eventRouter = createTRPCRouter({
       const limit = event.storageLimit
 
       return { used, limit, remaining: Math.max(0, limit - used) }
+    }),
+
+  getCollaborators: protectedProcedure
+    .input(z.object({ eventId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const event = await ctx.prisma.event.findUnique({
+        where: { id: input.eventId },
+        include: { collaborators: { select: { id: true, name: true, email: true, image: true } }, owner: { select: { id: true } } },
+      })
+      if (!event) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (event.ownerId !== ctx.userId) throw new TRPCError({ code: 'FORBIDDEN', message: 'Only owner can view collaborators' })
+      return event.collaborators
+    }),
+
+  addCollaborator: protectedProcedure
+    .input(z.object({ eventId: z.string(), email: z.string().email() }))
+    .mutation(async ({ ctx, input }) => {
+      const event = await ctx.prisma.event.findUnique({
+        where: { id: input.eventId },
+        include: { owner: true, collaborators: true },
+      })
+      if (!event) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (event.ownerId !== ctx.userId) throw new TRPCError({ code: 'FORBIDDEN', message: 'Only owner can add collaborators' })
+
+      const userToAdd = await ctx.prisma.user.findUnique({ where: { email: input.email } })
+      if (!userToAdd) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found with this email' })
+      if (userToAdd.id === ctx.userId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot add yourself as collaborator' })
+
+      const alreadyCollaborator = event.collaborators.some((c) => c.id === userToAdd.id)
+      if (alreadyCollaborator) throw new TRPCError({ code: 'BAD_REQUEST', message: 'User is already a collaborator' })
+
+      const tier = (event.owner.subscriptionTier ?? 'FREE') as 'FREE' | 'PRO' | 'ENTERPRISE'
+      const maxCollaborators = TIER_LIMITS[tier].collaborators
+      if (maxCollaborators !== Infinity && event.collaborators.length >= maxCollaborators) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: `Hai raggiunto il limite di ${maxCollaborators} collaboratori per il tuo piano.` })
+      }
+
+      await ctx.prisma.event.update({
+        where: { id: input.eventId },
+        data: { collaborators: { connect: { id: userToAdd.id } } },
+      })
+
+      return { success: true, user: { id: userToAdd.id, name: userToAdd.name, email: userToAdd.email, image: userToAdd.image } }
+    }),
+
+  removeCollaborator: protectedProcedure
+    .input(z.object({ eventId: z.string(), userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const event = await ctx.prisma.event.findUnique({ where: { id: input.eventId } })
+      if (!event) throw new TRPCError({ code: 'NOT_FOUND' })
+      if (event.ownerId !== ctx.userId) throw new TRPCError({ code: 'FORBIDDEN', message: 'Only owner can remove collaborators' })
+
+      await ctx.prisma.event.update({
+        where: { id: input.eventId },
+        data: { collaborators: { disconnect: { id: input.userId } } },
+      })
+
+      return { success: true }
     }),
 })

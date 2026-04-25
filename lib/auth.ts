@@ -57,7 +57,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub
-        session.user.subscriptionTier = (token.tier as string) ?? 'FREE'
+        // Always fetch latest tier from DB to handle Stripe upgrades without re-login
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.sub },
+            select: { subscriptionTier: true },
+          })
+          session.user.subscriptionTier = dbUser?.subscriptionTier ?? (token.tier as string) ?? 'FREE'
+        } catch {
+          session.user.subscriptionTier = (token.tier as string) ?? 'FREE'
+        }
         // Force admin for specific email (override stale JWT cache)
         session.user.isAdmin = session.user.email === 'egix.tuned@gmail.com' ? true : ((token.isAdmin as boolean) ?? false)
       }

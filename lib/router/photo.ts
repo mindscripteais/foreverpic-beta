@@ -1,7 +1,8 @@
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '@/lib/trpc'
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
-import { generatePhotoKey, generateUploadUrl, generateDownloadUrl, getPublicUrl, isR2Configured } from '@/lib/r2'
+import { generatePhotoKey, generateUploadUrl, generateDownloadUrl, getPublicUrl, isR2Configured, getWatermarkedUrl } from '@/lib/r2'
+import { formatBytes } from '@/lib/utils'
 import { TIER_LIMITS } from '@/lib/stripe'
 import { triggerPhotoAdded } from '@/lib/pusher'
 import { rateLimit, rateLimits } from '@/lib/rate-limit'
@@ -51,6 +52,20 @@ export const photoRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: `Storage limit reached (${limit / 1024 / 1024}MB per event on your tier). Upgrade for more.`,
+        })
+      }
+
+      // Check total global storage for the user
+      const totalStorageAgg = await ctx.prisma.photo.aggregate({
+        where: { event: { ownerId: ctx.userId } },
+        _sum: { size: true },
+      })
+      const totalStorageUsed = totalStorageAgg._sum.size || 0
+      const totalStorageLimit = TIER_LIMITS[tier].totalStorage
+      if (totalStorageUsed + input.size > totalStorageLimit) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: `Hai raggiunto il limite di spazio totale (${formatBytes(totalStorageLimit)}). Passa a un piano superiore per più spazio.`,
         })
       }
 
@@ -155,6 +170,20 @@ export const photoRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: `Storage limit reached for this event.`,
+        })
+      }
+
+      // Check total global storage for the event owner
+      const totalStorageAgg = await ctx.prisma.photo.aggregate({
+        where: { event: { ownerId: event.ownerId } },
+        _sum: { size: true },
+      })
+      const totalStorageUsed = totalStorageAgg._sum.size || 0
+      const totalStorageLimit = TIER_LIMITS[tier].totalStorage
+      if (totalStorageUsed + input.size > totalStorageLimit) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: `L'organizzatore ha raggiunto il limite di spazio totale.`,
         })
       }
 
@@ -272,6 +301,9 @@ export const photoRouter = createTRPCRouter({
         select: { id: true, key: true, url: true },
       })
 
+      const ownerTier = (event.owner.subscriptionTier ?? 'FREE') as 'FREE' | 'PRO' | 'ENTERPRISE'
+      const shouldWatermark = ownerTier === 'FREE'
+
       const urls = await Promise.all(
         photos.map(async (photo) => {
           let downloadUrl: string | null = null
@@ -279,7 +311,11 @@ export const photoRouter = createTRPCRouter({
             downloadUrl = photo.url
           } else if (isR2Configured()) {
             try {
-              downloadUrl = await generateDownloadUrl(photo.key)
+              if (shouldWatermark && !photo.key.startsWith('wm/')) {
+                downloadUrl = await getWatermarkedUrl(photo.key)
+              } else {
+                downloadUrl = await generateDownloadUrl(photo.key)
+              }
             } catch {
               downloadUrl = null
             }
@@ -289,6 +325,37 @@ export const photoRouter = createTRPCRouter({
       )
 
       return { urls }
+    }),
+
+  getDownloadUrl: publicProcedure
+    .input(z.object({ photoId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const photo = await ctx.prisma.photo.findUnique({
+        where: { id: input.photoId },
+        include: { event: { include: { owner: true } } },
+      })
+
+      if (!photo) throw new TRPCError({ code: 'NOT_FOUND' })
+
+      const ownerTier = (photo.event.owner.subscriptionTier ?? 'FREE') as 'FREE' | 'PRO' | 'ENTERPRISE'
+      const shouldWatermark = ownerTier === 'FREE'
+
+      let downloadUrl: string | null = null
+      if (photo.url.startsWith('data:')) {
+        downloadUrl = photo.url
+      } else if (isR2Configured()) {
+        try {
+          if (shouldWatermark && !photo.key.startsWith('wm/')) {
+            downloadUrl = await getWatermarkedUrl(photo.key)
+          } else {
+            downloadUrl = await generateDownloadUrl(photo.key)
+          }
+        } catch {
+          downloadUrl = null
+        }
+      }
+
+      return { downloadUrl, url: photo.url }
     }),
 
   delete: protectedProcedure

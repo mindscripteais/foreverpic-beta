@@ -1,10 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Calendar, Image, Eye, MoreVertical, Trash2, Settings, Copy, QrCode, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { formatDate, formatBytes } from '@/lib/utils'
 import { useState, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
@@ -25,6 +25,7 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, onDelete }: EventCardProps) {
+  const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -61,8 +62,15 @@ export function EventCard({ event, onDelete }: EventCardProps) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const stopPropagation = (e: React.MouseEvent) => e.stopPropagation()
+
   return (
-    <Card hover={false} padding="none" className="group overflow-hidden hover:shadow-elevated transition-all duration-300 hover:-translate-y-1.5">
+    <Card
+      hover={false}
+      padding="none"
+      className="group overflow-hidden hover:shadow-elevated transition-all duration-300 hover:-translate-y-1.5 cursor-pointer"
+      onClick={() => router.push(`/manage/${event.id}`)}
+    >
       {/* Cover */}
       <div className="aspect-video relative overflow-hidden bg-gradient-to-br from-warm-200 to-warm-100">
         {event.coverImage ? (
@@ -107,7 +115,7 @@ export function EventCard({ event, onDelete }: EventCardProps) {
               <Link
                 href={`/manage/${event.id}`}
                 className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-charcoal hover:bg-warm-200/50 transition-colors"
-                onClick={() => setMenuOpen(false)}
+                onClick={(e) => { stopPropagation(e); setMenuOpen(false) }}
               >
                 <Settings className="w-4 h-4 text-warm-500" />
                 Gestisci evento
@@ -115,7 +123,7 @@ export function EventCard({ event, onDelete }: EventCardProps) {
               <Link
                 href={`/events/${event.id}`}
                 className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-charcoal hover:bg-warm-200/50 transition-colors"
-                onClick={() => setMenuOpen(false)}
+                onClick={(e) => { stopPropagation(e); setMenuOpen(false) }}
               >
                 <Eye className="w-4 h-4 text-warm-500" />
                 Vedi galleria
@@ -123,13 +131,13 @@ export function EventCard({ event, onDelete }: EventCardProps) {
               <Link
                 href={`/manage/${event.id}#qr`}
                 className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-charcoal hover:bg-warm-200/50 transition-colors"
-                onClick={() => setMenuOpen(false)}
+                onClick={(e) => { stopPropagation(e); setMenuOpen(false) }}
               >
                 <QrCode className="w-4 h-4 text-warm-500" />
                 QR Code
               </Link>
               <button
-                onClick={handleCopyLink}
+                onClick={(e) => { stopPropagation(e); handleCopyLink(e) }}
                 className={cn(
                   "w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors",
                   copied ? "text-success bg-success/5" : "text-charcoal hover:bg-warm-200/50"
@@ -171,12 +179,14 @@ export function EventCard({ event, onDelete }: EventCardProps) {
           <Link
             href={`/events/${event.id}`}
             className="flex-1 py-2.5 bg-cream-100/95 backdrop-blur-sm rounded-xl text-center text-sm font-semibold text-charcoal hover:bg-cream-100 transition-colors shadow-soft"
+            onClick={stopPropagation}
           >
             Vedi galleria
           </Link>
           <Link
             href={`/manage/${event.id}`}
             className="flex-1 py-2.5 bg-coral/95 backdrop-blur-sm rounded-xl text-center text-sm font-semibold text-white hover:bg-coral transition-colors shadow-glow"
+            onClick={stopPropagation}
           >
             Gestisci
           </Link>

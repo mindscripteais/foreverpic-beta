@@ -1,14 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { Eye, EyeOff, Loader2, Chrome, ArrowRight, Camera } from 'lucide-react'
 import { Logo, LogoIcon } from '@/components/ui'
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -32,13 +34,13 @@ export default function SignInPage() {
       setError('Email o password non validi')
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      router.push(callbackUrl)
       router.refresh()
     }
   }
 
   async function handleGoogle() {
-    await signIn('google', { callbackUrl: '/dashboard' })
+    await signIn('google', { callbackUrl })
   }
 
   return (
@@ -181,8 +183,20 @@ export default function SignInPage() {
               </div>
             ))}
           </div>
-        </div>
+         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-cream-100">
+        <div className="w-10 h-10 border-4 border-coral border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <SignInForm />
+    </Suspense>
   )
 }

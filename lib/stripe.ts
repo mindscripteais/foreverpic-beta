@@ -13,6 +13,7 @@ export const TIER_PRICES = {
 export const TIER_LIMITS = {
   FREE: {
     storagePerEvent: 500 * 1024 * 1024, // 500MB
+    totalStorage: 1.5 * 1024 * 1024 * 1024, // 1.5GB total
     eventsPerMonth: 3,
     collaborators: 0,
     qrExpiration: 30, // days
@@ -20,6 +21,7 @@ export const TIER_LIMITS = {
   },
   PRO: {
     storagePerEvent: 5 * 1024 * 1024 * 1024, // 5GB
+    totalStorage: 15 * 1024 * 1024 * 1024, // 15GB total
     eventsPerMonth: Infinity,
     collaborators: 5,
     qrExpiration: Infinity, // never expires
@@ -27,6 +29,7 @@ export const TIER_LIMITS = {
   },
   ENTERPRISE: {
     storagePerEvent: 50 * 1024 * 1024 * 1024, // 50GB
+    totalStorage: 150 * 1024 * 1024 * 1024, // 150GB total
     eventsPerMonth: Infinity,
     collaborators: Infinity,
     qrExpiration: Infinity,

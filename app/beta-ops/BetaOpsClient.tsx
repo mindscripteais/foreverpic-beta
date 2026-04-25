@@ -229,6 +229,7 @@ export default function BetaOpsClient() {
                       <th className="text-left px-4 py-3">Tier</th>
                       <th className="text-left px-4 py-3">Eventi</th>
                       <th className="text-left px-4 py-3">Foto</th>
+                      <th className="text-left px-4 py-3">Storage</th>
                       <th className="text-left px-4 py-3">Registrato</th>
                     </tr>
                   </thead>
@@ -259,6 +260,7 @@ export default function BetaOpsClient() {
                         </td>
                         <td className="px-4 py-3">{u.eventCount}</td>
                         <td className="px-4 py-3">{u.photoCount}</td>
+                        <td className="px-4 py-3">{formatBytes(u.totalStorage || 0)}</td>
                         <td className="px-4 py-3 text-warm-500">{formatDate(u.createdAt)}</td>
                       </tr>
                     ))}

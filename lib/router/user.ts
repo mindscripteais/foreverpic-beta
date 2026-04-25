@@ -25,6 +25,9 @@ export const userRouter = createTRPCRouter({
     })
     const totalStorageUsed = storageAgg._sum.size || 0
 
+    const totalStorageLimit = limits.totalStorage
+    const storagePercent = totalStorageLimit > 0 ? Math.min(100, (totalStorageUsed / totalStorageLimit) * 100) : 0
+
     return {
       id: user.id,
       email: user.email,
@@ -33,6 +36,8 @@ export const userRouter = createTRPCRouter({
       tier,
       limits,
       totalStorageUsed,
+      totalStorageLimit,
+      storagePercent,
       eventCount: user._count.ownedEvents,
       subscription: user.subscriptions[0] ?? null,
     }

@@ -1,11 +1,11 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export const FROM_EMAIL = 'ForeverPic <noreply@foreverpic.app>'
 
 export async function sendWelcomeEmail(to: string, name?: string | null) {
-  if (!process.env.RESEND_API_KEY) {
+  if (!resend) {
     console.warn('[email] RESEND_API_KEY not set, skipping welcome email')
     return
   }

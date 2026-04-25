@@ -322,6 +322,56 @@ BUILD STATUS: ✅ PASSING
 
 BUILD STATUS: ✅ PASSING
 
+[2026-04-25] — STORAGE TRACKING & ADMIN ENHANCEMENTS
+
+1. GLOBAL STORAGE BAR (dashboard + settings):
+   - /dashboard: nuova barra progresso con colore dinamico (success/gold/warning/coral)
+     in base alla percentuale di spazio usato
+   - /settings: stessa barra nella sezione "Utilizzo questo mese"
+   - Dati da user.me: totalStorageUsed, totalStorageLimit, storagePercent
+
+2. ADMIN USERS TABLE:
+   - Router admin.users: aggregazione storage per utente via groupBy Photo + event owner mapping
+   - BetaOpsClient: nuova colonna "Storage" nella tabella utenti
+   - Ordine colonne: Utente | Tier | Eventi | Foto | Storage | Registrato
+
+3. REAL-TIME STORAGE UPDATE:
+   - UploadZone invalida `utils.user.me` dopo ogni upload completato
+   - La barra storage si aggiorna immediatamente senza refresh pagina
+
+4. TIER LIMITS AGGIORNATI:
+   - totalStorage: Free=1.5GB, Pro=15GB, Enterprise=150GB
+   - user.me calcola storagePercent = (totalStorageUsed / totalStorageLimit) * 100
+
+BUILD STATUS: ✅ PASSING
+
+[DEPLOY 2026-04-25]
+- URL produzione: https://foreverpic-beta-six.vercel.app
+- Fix: lib/email.ts — istanza Resend creata solo se RESEND_API_KEY esiste (evita crash build su Vercel)
+- Deploy: ~58s, build OK
+
+[DEPLOY 2026-04-25 #2]
+- URL produzione: https://foreverpic-beta-six.vercel.app (alias aggiornato)
+- Aggiunti Error Boundaries in tutte le pagine principali:
+  - app/error.tsx (root)
+  - app/(app)/error.tsx (dashboard/settings/events)
+  - app/events/[eventId]/error.tsx (public gallery)
+  - app/manage/[eventId]/error.tsx (manage page)
+  - app/beta-ops/error.tsx (admin, dark variant)
+- Componente ErrorFallback con design coerente (AlertTriangle, retry, home)
+- Deploy: ~47s, build OK
+
+[DEPLOY 2026-04-25 #3 — BUG FIXES]
+- URL produzione: https://foreverpic-beta-six.vercel.app
+- FIX Homepage loggati: nuovo componente LoggedInHome che mostra eventi recenti in grid
+- FIX EventCard clickabile: router.push su tutta la card, stopPropagation su bottoni interni
+- FIX Elimina evento dal dashboard: aggiunta mutazione event.delete + confirm dialog
+- FIX Ospite upload redirect: bottone "Accedi" con callbackUrl verso /signin
+- FIX Signin callbackUrl: useSearchParams wrappato in Suspense, redirect dopo login a callbackUrl
+- FIX Download singola foto: onDownload in PhotoLightbox con fetch blob + object URL
+- FIX Testi italiani: confirm delete in manage page tradotto in italiano
+- Deploy: ~52s, build OK
+
 [TODO POST-DEPLOY]
 - Test end-to-end completo: registrazione → evento → upload → gallery → download
 - Stripe live mode (sostituire test keys)

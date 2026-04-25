@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { Heart, Award, Download, Upload, Users, Loader2, Sparkles, Camera, Share2, Link as LinkIcon, MessageCircle } from 'lucide-react'
+import { Heart, Award, Download, Upload, Users, Loader2, Sparkles, Camera, Share2, Link as LinkIcon, MessageCircle, ChevronDown } from 'lucide-react'
 import JSZip from 'jszip'
 import { Button } from '@/components/ui'
 import { PhotoGrid, PhotoLightbox } from '@/components/photo'
@@ -18,6 +18,7 @@ export default function EventGalleryPage() {
   const eventId = params.eventId as string
   const { data: session } = useSession()
   const isLoggedIn = !!session?.user
+  const loadMoreRef = useRef<HTMLDivElement>(null)
 
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
@@ -31,6 +32,22 @@ export default function EventGalleryPage() {
     { enabled: !!eventId }
   )
 
+  const {
+    data: photosData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: photosLoading,
+  } = trpc.photo.list.useInfiniteQuery(
+    { eventId, limit: 20 },
+    {
+      enabled: !!eventId,
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+    }
+  )
+
+  const photos = photosData?.pages.flatMap((page) => page.photos) || []
+
   const isOwner = isLoggedIn && session?.user?.id === event?.owner?.id
   const galleryUrl = typeof window !== 'undefined' ? window.location.href : ''
 
@@ -40,12 +57,27 @@ export default function EventGalleryPage() {
     eventId ? `event-${eventId}` : null,
     ['photo-added', 'reaction-added', 'reaction-removed', 'vote-cast', 'vote-removed'],
     () => {
-      utils.event.get.invalidate({ id: eventId })
+      utils.photo.list.invalidate({ eventId, limit: 20 })
     }
   )
 
-  const totalReactions = event?.photos?.reduce((sum, p) => sum + p.reactions.length, 0) || 0
-  const totalVotes = event?.photos?.reduce((sum, p) => sum + p.votes.length, 0) || 0
+  // Auto-load more on scroll
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasNextPage || isFetchingNextPage) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage()
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(loadMoreRef.current)
+    return () => observer.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  const totalReactions = photos.reduce((sum, p) => sum + p.reactions.length, 0)
+  const totalVotes = photos.reduce((sum, p) => sum + p.votes.length, 0)
 
   const openLightbox = (photo: any, index: number) => {
     setLightboxIndex(index)
@@ -55,28 +87,27 @@ export default function EventGalleryPage() {
   const handleUploadComplete = (results: { id: string; url: string }[]) => {
     setUploadedCount((c) => c + results.length)
     setShowUploader(false)
-    // Invalidate cache so new photos appear immediately
-    utils.event.get.invalidate({ id: eventId })
+    utils.photo.list.invalidate({ eventId, limit: 20 })
   }
 
   const downloadUrls = trpc.photo.getDownloadUrls.useMutation()
 
   const addReaction = trpc.reaction.add.useMutation({
-    onSuccess: () => utils.event.get.invalidate({ id: eventId }),
+    onSuccess: () => utils.photo.list.invalidate({ eventId, limit: 20 }),
   })
   const removeReaction = trpc.reaction.remove.useMutation({
-    onSuccess: () => utils.event.get.invalidate({ id: eventId }),
+    onSuccess: () => utils.photo.list.invalidate({ eventId, limit: 20 }),
   })
   const castVote = trpc.vote.cast.useMutation({
-    onSuccess: () => utils.event.get.invalidate({ id: eventId }),
+    onSuccess: () => utils.photo.list.invalidate({ eventId, limit: 20 }),
   })
   const removeVote = trpc.vote.remove.useMutation({
-    onSuccess: () => utils.event.get.invalidate({ id: eventId }),
+    onSuccess: () => utils.photo.list.invalidate({ eventId, limit: 20 }),
   })
 
   const handleReact = (photoId: string, type: string) => {
     if (!session?.user?.id) return
-    const photo = event?.photos?.find((p) => p.id === photoId)
+    const photo = photos.find((p) => p.id === photoId)
     const hasReacted = photo?.reactions?.some((r) => r.userId === session.user.id && r.type === type)
     const reactionType = type as 'LOVE' | 'LAUGH' | 'WOW' | 'HEART' | 'FIRE'
     if (hasReacted) {
@@ -88,7 +119,7 @@ export default function EventGalleryPage() {
 
   const handleVote = (photoId: string) => {
     if (!session?.user?.id) return
-    const photo = event?.photos?.find((p) => p.id === photoId)
+    const photo = photos.find((p) => p.id === photoId)
     const hasVoted = photo?.votes?.some((v) => v.userId === session.user.id)
     if (hasVoted) {
       removeVote.mutate({ photoId })
@@ -150,7 +181,31 @@ export default function EventGalleryPage() {
     window.open(`https://wa.me/?text=${text}`, '_blank')
   }
 
-  if (eventLoading) {
+  const handleDownloadSingle = async (photo: { url: string; id: string }) => {
+    try {
+      // Fetch the appropriate download URL (watermarked for FREE tier)
+      const data = await utils.client.photo.getDownloadUrl.query({ photoId: photo.id })
+      const downloadUrl = data?.downloadUrl || photo.url
+
+      const response = await fetch(downloadUrl)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const ext = downloadUrl.split('.').pop() || 'jpg'
+      link.download = `foreverpic-${photo.id.slice(0, 8)}.${ext}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Download failed:', err)
+    }
+  }
+
+  const isLoading = eventLoading || photosLoading
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream-100">
         <div className="flex flex-col items-center gap-4">
@@ -177,8 +232,6 @@ export default function EventGalleryPage() {
       </div>
     )
   }
-
-  const photos = event.photos || []
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cream-100 to-white">
@@ -267,7 +320,7 @@ export default function EventGalleryPage() {
           {/* Stats */}
           <div className="flex items-center justify-center gap-6 md:gap-10 mt-10">
             <div className="text-center">
-              <p className="text-3xl font-bold font-mono text-charcoal">{photos.length}</p>
+              <p className="text-3xl font-bold font-mono text-charcoal">{event._count?.photos ?? photos.length}</p>
               <p className="text-xs text-warm-500 uppercase tracking-wide mt-1">Foto</p>
             </div>
             <div className="w-px h-10 bg-warm-300" />
@@ -321,13 +374,23 @@ export default function EventGalleryPage() {
                 guestMode={!isLoggedIn}
                 guestName={guestName || undefined}
               />
-              <Button
-                variant="ghost"
-                onClick={() => setShowUploader(false)}
-                className="mt-4 w-full py-2 text-sm text-warm-500 hover:text-charcoal transition-colors"
-              >
-                Annulla
-              </Button>
+              <div className="flex items-center gap-3 mt-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowUploader(false)}
+                  className="flex-1 py-2 text-sm text-warm-500 hover:text-charcoal transition-colors"
+                >
+                  Annulla
+                </Button>
+                {!isLoggedIn && (
+                  <Link
+                    href={`/signin?callbackUrl=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : `/events/${eventId}`)}`}
+                    className="flex-1 text-center py-2 text-sm font-medium text-coral hover:text-coral/80 transition-colors"
+                  >
+                    Accedi
+                  </Link>
+                )}
+              </div>
             </div>
           ) : (
             <div className="bg-gradient-to-r from-coral via-coral/90 to-gold p-[2px] rounded-2xl shadow-glow">
@@ -357,7 +420,27 @@ export default function EventGalleryPage() {
       {/* Photo Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {photos.length > 0 ? (
-          <PhotoGrid photos={photos} onPhotoClick={openLightbox} />
+          <>
+            <PhotoGrid photos={photos} onPhotoClick={openLightbox} />
+            {/* Load more trigger */}
+            <div ref={loadMoreRef} className="py-8 text-center">
+              {isFetchingNextPage && (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-coral" />
+                  <p className="text-sm text-warm-500">Caricamento foto...</p>
+                </div>
+              )}
+              {hasNextPage && !isFetchingNextPage && (
+                <button
+                  onClick={() => fetchNextPage()}
+                  className="inline-flex items-center gap-2 text-sm text-warm-600 hover:text-coral transition-colors"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                  Carica altre foto
+                </button>
+              )}
+            </div>
+          </>
         ) : (
           <div className="text-center py-24">
             <div className="w-20 h-20 bg-warm-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
@@ -389,6 +472,7 @@ export default function EventGalleryPage() {
           currentUserId={session?.user?.id}
           onReact={handleReact}
           onVote={handleVote}
+          onDownload={handleDownloadSingle}
         />
       )}
     </div>

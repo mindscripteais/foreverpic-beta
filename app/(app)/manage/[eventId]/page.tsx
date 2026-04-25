@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, QrCode, Settings, Upload, Trash2, Download, Loader2, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, QrCode, Settings, Upload, Trash2, Download, Loader2, Image as ImageIcon, ChevronDown, UserPlus, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout'
@@ -25,7 +25,10 @@ export default function ManageEventPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [coverUploading, setCoverUploading] = useState(false)
+  const [collabEmail, setCollabEmail] = useState('')
+  const [collabError, setCollabError] = useState<string | null>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
 
   const updateEvent = trpc.event.update.useMutation({
     onSuccess: () => {
@@ -38,15 +41,64 @@ export default function ManageEventPage() {
     { enabled: !!eventId }
   )
 
+  const {
+    data: photosData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: photosLoading,
+  } = trpc.photo.list.useInfiniteQuery(
+    { eventId, limit: 20 },
+    {
+      enabled: !!eventId,
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+    }
+  )
+
+  const photos = photosData?.pages.flatMap((page) => page.photos) || []
+
   const utils = trpc.useUtils()
+
+  const { data: collaborators } = trpc.event.getCollaborators.useQuery(
+    { eventId },
+    { enabled: !!eventId }
+  )
+
+  const addCollaborator = trpc.event.addCollaborator.useMutation({
+    onSuccess: () => {
+      utils.event.getCollaborators.invalidate({ eventId })
+      setCollabEmail('')
+      setCollabError(null)
+    },
+    onError: (err) => setCollabError(err.message),
+  })
+
+  const removeCollaborator = trpc.event.removeCollaborator.useMutation({
+    onSuccess: () => utils.event.getCollaborators.invalidate({ eventId }),
+  })
 
   usePusher(
     eventId ? `event-${eventId}` : null,
     ['photo-added', 'reaction-added', 'reaction-removed', 'vote-cast', 'vote-removed'],
     () => {
-      utils.event.get.invalidate({ id: eventId })
+      utils.photo.list.invalidate({ eventId, limit: 20 })
     }
   )
+
+  // Auto-load more on scroll
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasNextPage || isFetchingNextPage) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage()
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(loadMoreRef.current)
+    return () => observer.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   const deleteEvent = trpc.event.delete.useMutation({
     onSuccess: () => {
@@ -90,10 +142,12 @@ export default function ManageEventPage() {
     setLightboxOpen(true)
   }
 
-  if (eventLoading) {
+  const isLoading = eventLoading || photosLoading
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream-100">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="w-8 h-8 animate-spin text-coral" />
       </div>
     )
   }
@@ -111,12 +165,11 @@ export default function ManageEventPage() {
     )
   }
 
-  const photos = event.photos || []
   const totalStorageUsed = photos.reduce((sum, p) => sum + p.size, 0)
   const totalReactions = photos.reduce((sum, p) => sum + p.reactions.length, 0)
 
   const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+    if (confirm('Sei sicuro di voler eliminare questo evento? Questa azione non può essere annullata.')) {
       deleteEvent.mutate({ id: eventId })
     }
   }
@@ -190,7 +243,7 @@ export default function ManageEventPage() {
                 <UploadZone
                   eventId={eventId}
                   onUploadComplete={() => {
-                    utils.event.get.invalidate({ id: eventId })
+                    utils.photo.list.invalidate({ eventId, limit: 20 })
                   }}
                 />
               </div>
@@ -199,7 +252,7 @@ export default function ManageEventPage() {
             {/* Photos */}
             <div className="bg-cream-100 rounded-2xl border border-warm-300/40 overflow-hidden">
               <div className="px-6 py-4 border-b border-warm-300/40 flex items-center justify-between">
-                <h2 className="font-semibold text-charcoal">Foto ({photos.length})</h2>
+                <h2 className="font-semibold text-charcoal">Foto ({event._count?.photos ?? photos.length})</h2>
                 {photos.length > 0 && (
                   <Button variant="ghost" size="sm" onClick={handleDownloadAll}>
                     <Download className="w-4 h-4" />
@@ -209,7 +262,27 @@ export default function ManageEventPage() {
               </div>
               <div className="p-6">
                 {photos.length > 0 ? (
-                  <PhotoGrid photos={photos} onPhotoClick={openLightbox} />
+                  <>
+                    <PhotoGrid photos={photos} onPhotoClick={openLightbox} />
+                    {/* Load more trigger */}
+                    <div ref={loadMoreRef} className="py-6 text-center">
+                      {isFetchingNextPage && (
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="w-6 h-6 animate-spin text-coral" />
+                          <p className="text-sm text-warm-500">Caricamento foto...</p>
+                        </div>
+                      )}
+                      {hasNextPage && !isFetchingNextPage && (
+                        <button
+                          onClick={() => fetchNextPage()}
+                          className="inline-flex items-center gap-2 text-sm text-warm-600 hover:text-coral transition-colors"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                          Carica altre foto
+                        </button>
+                      )}
+                    </div>
+                  </>
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-warm-500">Nessuna foto caricata ancora</p>
@@ -295,21 +368,21 @@ export default function ManageEventPage() {
               <div className="p-6 space-y-4">
                 <div className="flex justify-between">
                   <span className="text-warm-600 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-primary" />
+                    <span className="w-2 h-2 rounded-full bg-coral" />
                     Visualizzazioni
                   </span>
                   <span className="font-mono font-medium">{event.views}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-warm-600 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-secondary" />
+                    <span className="w-2 h-2 rounded-full bg-gold" />
                     Foto
                   </span>
-                  <span className="font-mono font-medium">{photos.length}</span>
+                  <span className="font-mono font-medium">{event._count?.photos ?? photos.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-warm-600 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-accent" />
+                    <span className="w-2 h-2 rounded-full bg-success" />
                     Reazioni
                   </span>
                   <span className="font-mono font-medium">{totalReactions}</span>
@@ -326,6 +399,73 @@ export default function ManageEventPage() {
                     value={event.storageLimit > 0 ? (totalStorageUsed / event.storageLimit) * 100 : 0}
                     size="sm"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Collaborators */}
+            <div className="bg-cream-100 rounded-2xl border border-warm-300/40 overflow-hidden">
+              <div className="px-6 py-4 border-b border-warm-300/40">
+                <h2 className="font-semibold text-charcoal flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-coral" />
+                  Collaboratori
+                </h2>
+              </div>
+              <div className="p-4 space-y-4">
+                {/* Add collaborator */}
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="Email del collaboratore"
+                    value={collabEmail}
+                    onChange={(e) => { setCollabEmail(e.target.value); setCollabError(null) }}
+                    className="flex-1 px-3 py-2 rounded-xl border border-warm-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-coral/50 focus:border-coral"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (!collabEmail.trim()) return
+                      addCollaborator.mutate({ eventId, email: collabEmail.trim() })
+                    }}
+                    loading={addCollaborator.isPending}
+                  >
+                    Aggiungi
+                  </Button>
+                </div>
+                {collabError && (
+                  <p className="text-xs text-coral">{collabError}</p>
+                )}
+
+                {/* List */}
+                <div className="space-y-2">
+                  {collaborators && collaborators.length > 0 ? (
+                    collaborators.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between p-2 rounded-xl bg-warm-100">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {c.image ? (
+                            <img src={c.image} alt="" className="w-7 h-7 rounded-lg object-cover" />
+                          ) : (
+                            <div className="w-7 h-7 rounded-lg bg-coral/10 flex items-center justify-center text-coral text-xs font-bold">
+                              {(c.name || c.email)?.[0]?.toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{c.name || '—'}</p>
+                            <p className="text-xs text-warm-500 truncate">{c.email}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removeCollaborator.mutate({ eventId, userId: c.id })}
+                          className="p-1.5 rounded-lg hover:bg-coral/10 text-warm-500 hover:text-coral transition-colors"
+                          title="Rimuovi"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-warm-500 text-center py-2">Nessun collaboratore</p>
+                  )}
                 </div>
               </div>
             </div>

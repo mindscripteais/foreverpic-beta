@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Calendar, Lock, Globe, Users } from 'lucide-react'
+import { Calendar, Lock, Globe, Users, Image as ImageIcon, X } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import { Input, Textarea } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -21,20 +21,56 @@ export function CreateEventModal({ open, onClose, onEventCreated }: CreateEventM
   const [date, setDate] = useState('')
   const [privacy, setPrivacy] = useState<'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY'>('PUBLIC')
   const [qrExpirationDays, setQrExpirationDays] = useState(30)
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isUploadingCover, setIsUploadingCover] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement>(null)
 
   const utils = trpc.useUtils()
+  const updateEvent = trpc.event.update.useMutation()
 
   const createEvent = trpc.event.create.useMutation({
-    onSuccess: (event) => {
+    onSuccess: async (event) => {
       console.log('Event created with ID:', event.id)
       utils.event.list.invalidate()
+
+      // Upload cover image if selected
+      if (coverFile) {
+        setIsUploadingCover(true)
+        try {
+          const key = `events/${event.id}/cover`
+          const formData = new FormData()
+          formData.append('file', coverFile)
+          formData.append('eventId', event.id)
+          formData.append('key', key)
+
+          const res = await fetch('/api/upload', { method: 'POST', body: formData })
+          const data = await res.json()
+          if (res.ok && data.url) {
+            await updateEvent.mutateAsync({ id: event.id, coverImage: data.url })
+          }
+        } catch (err: any) {
+          console.error('Cover upload error:', err)
+        } finally {
+          setIsUploadingCover(false)
+        }
+      }
+
       if (onEventCreated) {
         onEventCreated({ id: event.id, name: event.name })
       } else {
         router.push(`/manage/${event.id}`)
       }
       onClose()
+      // Reset form
+      setName('')
+      setDescription('')
+      setDate('')
+      setPrivacy('PUBLIC')
+      setQrExpirationDays(30)
+      setCoverFile(null)
+      setCoverPreview(null)
     },
     onError: (err) => {
       console.error('Create event error:', err)
@@ -42,11 +78,28 @@ export function CreateEventModal({ open, onClose, onEventCreated }: CreateEventM
     },
   })
 
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setCoverFile(file)
+      setCoverPreview(URL.createObjectURL(file))
+    }
+  }
+
+  const removeCover = () => {
+    setCoverFile(null)
+    if (coverPreview) {
+      URL.revokeObjectURL(coverPreview)
+      setCoverPreview(null)
+    }
+    if (coverInputRef.current) {
+      coverInputRef.current.value = ''
+    }
+  }
+
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault()
     setError(null)
-
-    console.log('[CreateEventModal] handleSubmit called', { name, date, privacy, qrExpirationDays })
 
     if (!name.trim()) {
       setError('Il nome dell\'evento è obbligatorio')
@@ -56,13 +109,6 @@ export function CreateEventModal({ open, onClose, onEventCreated }: CreateEventM
       setError('La data dell\'evento è obbligatoria')
       return
     }
-
-    console.log('[CreateEventModal] Submitting event.create mutation', {
-      name: name.trim(),
-      date,
-      privacy,
-      qrExpirationDays: qrExpirationDays || undefined,
-    })
 
     createEvent.mutate({
       name: name.trim(),
@@ -112,6 +158,40 @@ export function CreateEventModal({ open, onClose, onEventCreated }: CreateEventM
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
+
+          {/* Cover Image */}
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-charcoal">Immagine di copertina (opzionale)</label>
+            {coverPreview ? (
+              <div className="relative rounded-xl overflow-hidden aspect-video bg-warm-200">
+                <img src={coverPreview} alt="Anteprima copertina" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={removeCover}
+                  className="absolute top-2 right-2 p-1.5 bg-charcoal/60 text-white rounded-lg hover:bg-charcoal/80 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                className="w-full h-32 border-2 border-dashed border-warm-300 rounded-xl flex flex-col items-center justify-center text-warm-500 hover:border-coral hover:text-coral transition-colors"
+              >
+                <ImageIcon className="w-6 h-6 mb-2" />
+                <span className="text-sm font-medium">Clicca per scegliere un'immagine</span>
+                <span className="text-xs text-warm-400 mt-1">JPG, PNG, WebP</span>
+              </button>
+            )}
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleCoverSelect}
+            />
+          </div>
 
           {/* Privacy */}
           <div className="space-y-3">
@@ -166,10 +246,10 @@ export function CreateEventModal({ open, onClose, onEventCreated }: CreateEventM
               type="submit"
               variant="primary"
               className="flex-1"
-              loading={createEvent.isPending}
+              loading={createEvent.isPending || isUploadingCover}
             >
               <Calendar className="w-4 h-4" />
-              Crea evento
+              {isUploadingCover ? 'Caricamento copertina...' : 'Crea evento'}
             </Button>
           </div>
         </form>
