@@ -3,9 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { ArrowRight, QrCode, Zap, Shield, Users, Download, Heart, Camera, Star, Sparkles, ChevronRight, Smartphone, ScanLine, Images } from 'lucide-react'
+import { ArrowRight, QrCode, Zap, Shield, Users, Download, Heart, Camera, Star, Sparkles, ChevronRight, Smartphone, ScanLine, Images, Menu, X } from 'lucide-react'
 import { Logo, LogoIcon } from '@/components/ui'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useInView } from '@/hooks/useInView'
 
 function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
@@ -50,6 +49,7 @@ function Reveal({ children, delay = 0, className = '' }: { children: React.React
 export default function HomePage() {
   const { data: session } = useSession()
   const isLoggedIn = !!session?.user
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cream-100 to-white overflow-x-hidden">
@@ -61,18 +61,43 @@ export default function HomePage() {
               <LogoIcon size="sm" className="group-hover:scale-105 transition-transform" />
               <Logo size="sm" />
             </Link>
+
+            {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-8">
               <Link href="#features" className="text-warm-600 hover:text-charcoal text-sm font-medium transition-colors">Funzionalità</Link>
               <Link href="#how-it-works" className="text-warm-600 hover:text-charcoal text-sm font-medium transition-colors">Come funziona</Link>
               <Link href="#pricing" className="text-warm-600 hover:text-charcoal text-sm font-medium transition-colors">Prezzi</Link>
               <Link href="/signin" className="text-warm-600 hover:text-charcoal text-sm font-medium transition-colors">Accedi</Link>
             </nav>
-            <ThemeToggle />
-            <Link href="/signup" className="inline-flex items-center gap-2 bg-coral text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-glow hover:bg-coral/90 transition-all hover:scale-[1.02] active:scale-[0.98]">
+
+            <div className="flex items-center gap-3">
+              <Link href="/signup" className="hidden md:inline-flex items-center gap-2 bg-coral text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-glow hover:bg-coral/90 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                Inizia ora
+              </Link>
+              {/* Mobile menu button */}
+              <button
+                className="md:hidden p-2 rounded-xl hover:bg-warm-200 text-warm-600 transition-colors"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Menu"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-cream-100 border-b border-warm-300/40 px-4 py-4 space-y-3">
+            <Link href="#features" onClick={() => setMobileMenuOpen(false)} className="block text-warm-600 hover:text-charcoal text-sm font-medium py-2">Funzionalità</Link>
+            <Link href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="block text-warm-600 hover:text-charcoal text-sm font-medium py-2">Come funziona</Link>
+            <Link href="#pricing" onClick={() => setMobileMenuOpen(false)} className="block text-warm-600 hover:text-charcoal text-sm font-medium py-2">Prezzi</Link>
+            <Link href="/signin" onClick={() => setMobileMenuOpen(false)} className="block text-warm-600 hover:text-charcoal text-sm font-medium py-2">Accedi</Link>
+            <Link href="/signup" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-3 bg-coral text-white font-semibold rounded-xl shadow-glow">
               Inizia ora
             </Link>
           </div>
-        </div>
+        )}
       </header>
 
       {/* Hero */}
