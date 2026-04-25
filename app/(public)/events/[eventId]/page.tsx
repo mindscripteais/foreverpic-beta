@@ -150,7 +150,7 @@ export default function EventGalleryPage() {
       <header className="bg-cream-100/80 backdrop-blur-md border-b border-warm-300/40 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link href={isLoggedIn ? '/dashboard' : '/'} className="flex items-center gap-2 group">
               <div className="w-8 h-8 bg-gradient-to-br from-coral to-gold rounded-xl group-hover:scale-105 transition-transform" />
               <span className="font-display text-xl font-semibold text-charcoal">ForeverPic</span>
             </Link>

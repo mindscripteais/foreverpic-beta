@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, QrCode, Zap, Shield, Users, Download, Heart, Camera, Star, Sparkles, ChevronRight, PartyPopper, Cake, Briefcase, Palmtree } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { ArrowRight, QrCode, Zap, Shield, Users, Download, Heart, Camera, Star, Sparkles, ChevronRight, Smartphone, ScanLine, Images } from 'lucide-react'
 import { Logo, LogoIcon } from '@/components/ui'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useInView } from '@/hooks/useInView'
@@ -47,13 +48,16 @@ function Reveal({ children, delay = 0, className = '' }: { children: React.React
 }
 
 export default function HomePage() {
+  const { data: session } = useSession()
+  const isLoggedIn = !!session?.user
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-cream-100 to-white overflow-x-hidden">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-cream-100/80 backdrop-blur-md border-b border-warm-300/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link href={isLoggedIn ? '/dashboard' : '/'} className="flex items-center gap-2 group">
               <LogoIcon size="sm" className="group-hover:scale-105 transition-transform" />
               <Logo size="sm" />
             </Link>
@@ -135,117 +139,88 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Live Gallery Preview — Polaroid Scatter */}
+      {/* App Preview — Real UI Mockups */}
       <section id="demo" className="py-20 px-4 overflow-hidden">
         <div className="max-w-6xl mx-auto">
           <Reveal>
             <div className="text-center mb-14">
-              <h2 className="font-display text-3xl md:text-4xl font-bold text-charcoal mb-3">Il tuo evento, raccontato da tutti</h2>
+              <h2 className="font-display text-3xl md:text-4xl font-bold text-charcoal mb-3">Vedi ForeverPic in azione</h2>
               <p className="text-warm-600 text-lg max-w-xl mx-auto">
-                Una galleria viva che cresce mentre gli ospiti caricano i momenti — nessuna app necessaria.
+                Tre semplici passaggi. Nessuna app da installare per gli ospiti.
               </p>
             </div>
           </Reveal>
 
-          <Reveal delay={150}>
-            <div className="relative h-[520px] md:h-[480px] flex items-center justify-center select-none">
-              {/* Background subtle texture */}
-              <div className="absolute inset-0 bg-warm-100 rounded-[2.5rem] border border-warm-300/30 shadow-elevated" />
-              <div className="absolute inset-4 md:inset-8 bg-cream-100 rounded-[2rem] border border-warm-300/20" />
-
-              {[
-                {
-                  rotation: -8,
-                  x: '-28%',
-                  y: '-12%',
-                  icon: Heart,
-                  bg: 'from-coral/80 to-coral/40',
-                  caption: 'Primo ballo ❤️',
-                  delay: 0,
-                },
-                {
-                  rotation: 5,
-                  x: '22%',
-                  y: '-18%',
-                  icon: PartyPopper,
-                  bg: 'from-gold/80 to-amber-400/40',
-                  caption: 'Brindisi di mezzanotte',
-                  delay: 80,
-                },
-                {
-                  rotation: -3,
-                  x: '-18%',
-                  y: '18%',
-                  icon: Cake,
-                  bg: 'from-success/70 to-emerald-400/40',
-                  caption: 'Taglio della torta',
-                  delay: 160,
-                },
-                {
-                  rotation: 7,
-                  x: '28%',
-                  y: '12%',
-                  icon: Camera,
-                  bg: 'from-charcoal/30 to-charcoal/10',
-                  caption: 'Selfie di gruppo',
-                  delay: 240,
-                },
-                {
-                  rotation: -6,
-                  x: '0%',
-                  y: '-2%',
-                  icon: Palmtree,
-                  bg: 'from-coral/60 to-gold/50',
-                  caption: 'Vibes al tramonto',
-                  delay: 320,
-                },
-                {
-                  rotation: 4,
-                  x: '-32%',
-                  y: '2%',
-                  icon: Briefcase,
-                  bg: 'from-warm-400/70 to-warm-500/40',
-                  caption: 'Giornata conferenza',
-                  delay: 400,
-                },
-              ].map((p, i) => (
-                <div
-                  key={i}
-                  className="absolute transition-all duration-500 ease-out hover:!rotate-0 hover:!scale-110 hover:z-50 group cursor-pointer"
-                  style={{
-                    transform: `translate(${p.x}, ${p.y}) rotate(${p.rotation}deg)`,
-                    transitionDelay: `${p.delay}ms`,
-                    zIndex: 10 + i,
-                  }}
-                >
-                  <div className="bg-white p-3 pb-5 rounded-xl shadow-card group-hover:shadow-elevated transition-all duration-500 w-44 md:w-52">
-                    {/* Photo area */}
-                    <div className={`relative aspect-[4/3] rounded-lg bg-gradient-to-br ${p.bg} overflow-hidden mb-3`}>
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.25),transparent_60%)]" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <p.icon className="w-10 h-10 text-white/90 drop-shadow-md group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500" />
-                      </div>
-                      {/* Shine effect on hover */}
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-tr from-transparent via-white/20 to-transparent" />
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                step: '01',
+                title: 'Crea il tuo evento',
+                desc: 'Scegli nome, data e privacy. Generiamo automaticamente un QR code unico.',
+                icon: Sparkles,
+                mockup: (
+                  <div className="bg-white rounded-xl border border-warm-300/40 p-4 shadow-soft">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-3 h-3 rounded-full bg-coral/20" />
+                      <div className="w-3 h-3 rounded-full bg-gold/20" />
+                      <div className="w-3 h-3 rounded-full bg-warm-300" />
                     </div>
-                    {/* Caption */}
-                    <p className="text-center font-display italic text-sm text-warm-700">{p.caption}</p>
+                    <div className="space-y-2">
+                      <div className="h-2.5 bg-warm-200 rounded w-3/4" />
+                      <div className="h-2.5 bg-warm-200 rounded w-1/2" />
+                      <div className="h-8 bg-gradient-to-r from-coral/10 to-gold/10 rounded-lg mt-2" />
+                    </div>
                   </div>
+                ),
+              },
+              {
+                step: '02',
+                title: 'Condividi il QR',
+                desc: 'Stampalo, mostralo su uno schermo o condividilo via WhatsApp. Gli ospiti scansionano e caricano.',
+                icon: ScanLine,
+                mockup: (
+                  <div className="bg-white rounded-xl border border-warm-300/40 p-4 shadow-soft flex flex-col items-center">
+                    <div className="w-20 h-20 bg-gradient-to-br from-coral to-gold rounded-xl flex items-center justify-center mb-2">
+                      <QrCode className="w-10 h-10 text-white" />
+                    </div>
+                    <div className="h-2 bg-warm-200 rounded w-16" />
+                  </div>
+                ),
+              },
+              {
+                step: '03',
+                title: 'Raccogli le foto',
+                desc: 'Le foto appaiono in tempo reale nella galleria. Reazioni, voti e download inclusi.',
+                icon: Images,
+                mockup: (
+                  <div className="bg-white rounded-xl border border-warm-300/40 p-4 shadow-soft">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="aspect-square bg-coral/10 rounded-lg" />
+                      <div className="aspect-square bg-gold/10 rounded-lg" />
+                      <div className="aspect-square bg-success/10 rounded-lg" />
+                      <div className="aspect-square bg-charcoal/5 rounded-lg flex items-center justify-center">
+                        <span className="text-xs text-warm-500 font-medium">+12</span>
+                      </div>
+                    </div>
+                  </div>
+                ),
+              },
+            ].map((item, i) => (
+              <Reveal key={i} delay={i * 150}>
+                <div className="bg-cream-100 rounded-2xl border border-warm-300/40 p-6 hover:shadow-elevated transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-3xl font-bold font-display text-coral/30">{item.step}</span>
+                    <div className="w-10 h-10 bg-gradient-to-br from-coral/10 to-gold/10 rounded-xl flex items-center justify-center">
+                      <item.icon className="w-5 h-5 text-coral" />
+                    </div>
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-charcoal mb-2">{item.title}</h3>
+                  <p className="text-warm-600 text-sm leading-relaxed mb-5">{item.desc}</p>
+                  {item.mockup}
                 </div>
-              ))}
-
-              {/* Center floating QR hint */}
-              <div className="absolute z-40 bg-white/90 backdrop-blur-sm border border-warm-300/40 rounded-2xl px-5 py-3 shadow-soft flex items-center gap-3 animate-pulse-soft">
-                <div className="w-10 h-10 bg-gradient-to-br from-coral to-gold rounded-lg flex items-center justify-center">
-                  <QrCode className="w-5 h-5 text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="text-xs font-semibold text-charcoal">Scansiona per caricare</p>
-                  <p className="text-[10px] text-warm-500">Gli ospiti aggiungono foto all'istante</p>
-                </div>
-              </div>
-            </div>
-          </Reveal>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 

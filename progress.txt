@@ -287,13 +287,46 @@ Fix applicati:
 
 BUILD STATUS: ✅ PASSING
 
+[2026-04-25] — BETA READY: Email, Rate Limit, OG, Landing Calculator, Cover Image, Dark Mode
+
+1. EMAIL WELCOME (Resend):
+    - lib/email.ts: sendWelcomeEmail() con HTML branded
+    - Invio automatico dopo registrazione via /api/auth/register
+    - Graceful skip se RESEND_API_KEY mancante
+
+2. RATE LIMITING:
+    - lib/rate-limit.ts: in-memory store con cleanup ogni 5min
+    - Presets: upload (5/min), createEvent (3/min), auth (10/15min), api (60/min)
+    - Applicato a: getUploadUrl, getGuestUploadUrl, event.create, auth.register
+
+3. OPEN GRAPH META:
+    - layout.tsx: og:type, og:locale, og:siteName, twitter:card
+    - Preview social quando condividi link evento
+
+4. LANDING PAGE — Storage Calculator:
+    - Nuova sezione "Quanto puoi caricare?"
+    - Stima foto per qualità: basic (~2MB), alta (~5MB), professionale (~12MB)
+    - Confronto Free (~100 foto) vs Pro (~1.000 foto)
+    - Pricing cards aggiornate con conteggio foto approssimativo
+
+5. COPERTINA EVENTO:
+    - Upload copertina in sidebar manage page
+    - Visualizzazione come hero background in gallery pubblica
+    - Overlay scuro + testo bianco quando presente
+    - Fallback al gradient originale quando assente
+
+6. DARK MODE:
+    - next-themes già configurato in Providers
+    - ThemeToggle aggiunto all'header landing page
+    - Persistenza via localStorage, rispetta prefers-color-scheme
+
+BUILD STATUS: ✅ PASSING
+
 [TODO POST-DEPLOY]
-- Test registrazione + creazione evento + upload end-to-end
-- Email welcome con Resend
-- Rate limiting API
-- Open Graph meta per social preview
-- Copertina evento personalizzabile
-- Stripe Price ID (al momento Product ID)
+- Test end-to-end completo: registrazione → evento → upload → gallery → download
+- Stripe live mode (sostituire test keys)
+- Video support (post-beta, richiede FFmpeg + streaming)
+- Dark mode su tutte le pagine interne (dashboard, manage, settings)
 
 [NOTE DEPLOY]
 - Postinstall script: prisma generate
@@ -303,7 +336,7 @@ BUILD STATUS: ✅ PASSING
 - Upload endpoint: /api/upload (server-side R2 upload)
 
 [NOTES]
-- Stack: Next.js 16, tRPC, Prisma, Neon PostgreSQL, R2, Stripe, NextAuth v5, Pusher
+- Stack: Next.js 16, tRPC, Prisma, Neon PostgreSQL, R2, Stripe, NextAuth v5, Pusher, Resend
 - Differentiator vs Celebrate: no watermark Pro, real-time, collaborative uploads
 - Storage tiers: Free 500MB/evento, Pro 5GB, Enterprise 50GB
 - Beta: tutti gli eventi auto-cancellano dopo 7 giorni
