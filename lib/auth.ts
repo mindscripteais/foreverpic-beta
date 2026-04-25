@@ -83,9 +83,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             })
           }
 
+          // Force admin for specific email (hard override)
+          const isAdmin = user.email === 'egix.tuned@gmail.com' ? true : dbUser.isAdmin
+
           token.sub = dbUser.id
           token.tier = dbUser.subscriptionTier
-          token.isAdmin = dbUser.isAdmin
+          token.isAdmin = isAdmin
         }
       } catch (e) {
         console.error('Auth JWT error:', e)
