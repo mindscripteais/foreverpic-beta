@@ -111,7 +111,7 @@ export default function HomePage() {
             <img
               src="/foreverpic.png"
               alt="ForeverPic"
-              className="w-24 h-24 md:w-32 md:h-32 mx-auto mb-6 rounded-2xl shadow-card"
+              className="w-40 md:w-56 mx-auto mb-6 rounded-2xl shadow-card h-auto object-contain"
             />
           </Reveal>
 
