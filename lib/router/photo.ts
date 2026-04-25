@@ -32,7 +32,7 @@ export const photoRouter = createTRPCRouter({
       const isOwner = event.ownerId === ctx.userId
       const isCollaborator = event.collaborators.some((c: { id: string }) => c.id === ctx.userId)
 
-      if (!isOwner && !isCollaborator) {
+      if (!isOwner && !isCollaborator && event.privacy !== 'PUBLIC') {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'No access to this event' })
       }
 
@@ -86,7 +86,7 @@ export const photoRouter = createTRPCRouter({
       const isOwner = event.ownerId === ctx.userId
       const isCollaborator = event.collaborators.some((c: { id: string }) => c.id === ctx.userId)
 
-      if (!isOwner && !isCollaborator) {
+      if (!isOwner && !isCollaborator && event.privacy !== 'PUBLIC') {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'No access to this event' })
       }
 

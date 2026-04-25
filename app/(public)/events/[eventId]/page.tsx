@@ -61,6 +61,42 @@ export default function EventGalleryPage() {
 
   const downloadUrls = trpc.photo.getDownloadUrls.useMutation()
 
+  const addReaction = trpc.reaction.add.useMutation({
+    onSuccess: () => utils.event.get.invalidate({ id: eventId }),
+  })
+  const removeReaction = trpc.reaction.remove.useMutation({
+    onSuccess: () => utils.event.get.invalidate({ id: eventId }),
+  })
+  const castVote = trpc.vote.cast.useMutation({
+    onSuccess: () => utils.event.get.invalidate({ id: eventId }),
+  })
+  const removeVote = trpc.vote.remove.useMutation({
+    onSuccess: () => utils.event.get.invalidate({ id: eventId }),
+  })
+
+  const handleReact = (photoId: string, type: string) => {
+    if (!session?.user?.id) return
+    const photo = event?.photos?.find((p) => p.id === photoId)
+    const hasReacted = photo?.reactions?.some((r) => r.userId === session.user.id && r.type === type)
+    const reactionType = type as 'LOVE' | 'LAUGH' | 'WOW' | 'HEART' | 'FIRE'
+    if (hasReacted) {
+      removeReaction.mutate({ photoId, type: reactionType })
+    } else {
+      addReaction.mutate({ photoId, type: reactionType })
+    }
+  }
+
+  const handleVote = (photoId: string) => {
+    if (!session?.user?.id) return
+    const photo = event?.photos?.find((p) => p.id === photoId)
+    const hasVoted = photo?.votes?.some((v) => v.userId === session.user.id)
+    if (hasVoted) {
+      removeVote.mutate({ photoId })
+    } else {
+      castVote.mutate({ photoId })
+    }
+  }
+
   const handleDownloadAll = async () => {
     const zip = new JSZip()
     const folder = zip.folder('photos') || zip
@@ -350,6 +386,9 @@ export default function EventGalleryPage() {
           initialIndex={lightboxIndex}
           open={lightboxOpen}
           onClose={() => setLightboxOpen(false)}
+          currentUserId={session?.user?.id}
+          onReact={handleReact}
+          onVote={handleVote}
         />
       )}
     </div>
