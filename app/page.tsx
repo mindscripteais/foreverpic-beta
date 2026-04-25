@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { ArrowRight, QrCode, Zap, Shield, Users, Download, Heart, Camera, Star, Sparkles, ChevronRight, Smartphone, ScanLine, Images, Menu, X } from 'lucide-react'
-import { Logo, LogoIcon } from '@/components/ui'
 import { useInView } from '@/hooks/useInView'
 
 function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
@@ -57,9 +56,8 @@ export default function HomePage() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-cream-100/80 backdrop-blur-md border-b border-warm-300/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href={isLoggedIn ? '/dashboard' : '/'} className="flex items-center gap-2 group">
-              <LogoIcon size="sm" className="group-hover:scale-105 transition-transform" />
-              <Logo size="sm" />
+            <Link href={isLoggedIn ? '/dashboard' : '/'} className="font-display font-semibold text-charcoal text-xl group-hover:text-coral transition-colors">
+              ForeverPic
             </Link>
 
             {/* Desktop nav */}
@@ -110,6 +108,14 @@ export default function HomePage() {
 
         <div className="relative max-w-7xl mx-auto text-center">
           <Reveal>
+            <img
+              src="/foreverpic.png"
+              alt="ForeverPic"
+              className="w-24 h-24 md:w-32 md:h-32 mx-auto mb-6 rounded-2xl shadow-card"
+            />
+          </Reveal>
+
+          <Reveal delay={50}>
             <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-cream-100 rounded-full shadow-soft border border-warm-300/50 mb-8 hover:shadow-elevated transition-shadow cursor-default">
               <span className="w-2 h-2 bg-success rounded-full animate-pulse-soft" />
               <span className="text-sm font-medium text-warm-700">Ora con upload collaborativi in tempo reale</span>
@@ -581,9 +587,8 @@ export default function HomePage() {
       <footer className="py-12 border-t border-warm-300/40 bg-warm-100/30">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <Link href="/" className="flex items-center gap-2 group">
-              <LogoIcon size="sm" className="group-hover:scale-105 transition-transform" />
-              <Logo size="sm" />
+            <Link href="/" className="font-display font-semibold text-charcoal text-lg group-hover:text-coral transition-colors">
+              ForeverPic
             </Link>
             <div className="flex items-center gap-6 text-sm text-warm-600">
               <Link href="#" className="hover:text-charcoal transition-colors">Privacy</Link>
