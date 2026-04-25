@@ -34,21 +34,37 @@ const ACCEPTED_TYPES = {
   'image/png': ['.png'],
   'image/webp': ['.webp'],
   'image/heic': ['.heic'],
+  'video/mp4': ['.mp4'],
+  'video/quicktime': ['.mov'],
+  'video/webm': ['.webm'],
 }
 
-function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+function getMediaDimensions(file: File): Promise<{ width: number; height: number }> {
   return new Promise((resolve) => {
-    const img = document.createElement('img')
     const url = URL.createObjectURL(file)
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      resolve({ width: img.naturalWidth, height: img.naturalHeight })
+    if (file.type.startsWith('video/')) {
+      const video = document.createElement('video')
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(url)
+        resolve({ width: video.videoWidth, height: video.videoHeight })
+      }
+      video.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve({ width: 1920, height: 1080 })
+      }
+      video.src = url
+    } else {
+      const img = document.createElement('img')
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        resolve({ width: img.naturalWidth, height: img.naturalHeight })
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve({ width: 0, height: 0 })
+      }
+      img.src = url
     }
-    img.onerror = () => {
-      URL.revokeObjectURL(url)
-      resolve({ width: 0, height: 0 })
-    }
-    img.src = url
   })
 }
 
@@ -65,7 +81,7 @@ export function UploadZone({ eventId, onUploadComplete, maxSize = 20 * 1024 * 10
     )
 
     try {
-      const dims = await getImageDimensions(uf.file)
+      const dims = await getMediaDimensions(uf.file)
 
       // Get upload key and validate limits
       let key: string
@@ -144,6 +160,7 @@ export function UploadZone({ eventId, onUploadComplete, maxSize = 20 * 1024 * 10
           width: dims.width || 1200,
           height: dims.height || 1200,
           guestName,
+          type: uf.file.type.startsWith('video/') ? 'VIDEO' : 'PHOTO',
         })
       } else {
         result = await confirmUpload.mutateAsync({
@@ -152,6 +169,7 @@ export function UploadZone({ eventId, onUploadComplete, maxSize = 20 * 1024 * 10
           size: uf.file.size,
           width: dims.width || 1200,
           height: dims.height || 1200,
+          type: uf.file.type.startsWith('video/') ? 'VIDEO' : 'PHOTO',
         })
       }
 
@@ -239,10 +257,10 @@ export function UploadZone({ eventId, onUploadComplete, maxSize = 20 * 1024 * 10
           </div>
           <div>
             <p className="font-semibold text-lg text-charcoal">
-              {isDragActive ? 'Rilascia le foto qui' : 'Trascina le foto qui o clicca per caricare'}
+              {isDragActive ? 'Rilascia qui' : 'Trascina foto o video qui o clicca per caricare'}
             </p>
             <p className="text-sm text-warm-500 mt-1">
-              JPG, PNG, WebP, HEIC fino a {formatBytes(maxSize)} ciascuna
+              JPG, PNG, WebP, MP4, MOV fino a {formatBytes(maxSize)} ciascuno
             </p>
           </div>
         </div>

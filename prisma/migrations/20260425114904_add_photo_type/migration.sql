@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Photo" ADD COLUMN     "type" TEXT NOT NULL DEFAULT 'PHOTO';

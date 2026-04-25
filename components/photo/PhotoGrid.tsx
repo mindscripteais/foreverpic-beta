@@ -8,6 +8,7 @@ interface Photo {
   id: string
   url: string
   thumbnail?: string
+  type?: string
   reactions: { type: string; userId: string }[]
   votes: { userId: string }[]
   uploader?: { name?: string | null } | null
@@ -66,13 +67,30 @@ export function PhotoGrid({ photos, currentUserId, onPhotoClick }: PhotoGridProp
               {!loaded[photo.id] && (
                 <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-warm-200 via-cream to-warm-200 bg-[length:200%_100%]" />
               )}
-              <img
-                src={photo.url}
-                alt=""
-                className="w-full transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
-                onLoad={() => setLoaded((prev) => ({ ...prev, [photo.id]: true }))}
-              />
+              {photo.type === 'VIDEO' ? (
+                <video
+                  src={photo.url}
+                  className="w-full transition-transform duration-500 group-hover:scale-105"
+                  muted
+                  playsInline
+                  preload="metadata"
+                  onLoadedMetadata={() => setLoaded((prev) => ({ ...prev, [photo.id]: true }))}
+                />
+              ) : (
+                <img
+                  src={photo.url}
+                  alt=""
+                  className="w-full transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                  onLoad={() => setLoaded((prev) => ({ ...prev, [photo.id]: true }))}
+                />
+              )}
+              {photo.type === 'VIDEO' && (
+                <div className="absolute top-3 left-3 bg-charcoal/70 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <span className="w-2 h-2 bg-coral rounded-full animate-pulse" />
+                  Video
+                </div>
+              )}
 
               {/* Soft gradient overlay on hover */}
               <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

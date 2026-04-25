@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 interface Photo {
   id: string
   url: string
+  type?: string
   reactions: { type: string; userId: string }[]
   votes: { userId: string }[]
   uploader?: { name?: string | null } | null
@@ -166,11 +167,21 @@ export function PhotoLightbox({
           style={{ transform: `scale(${scale})` }}
           onClick={(e) => e.stopPropagation()}
         >
-          <img
-            src={currentPhoto.url}
-            alt=""
-            className="max-w-[90vw] max-h-[75vh] object-contain"
-          />
+          {currentPhoto.type === 'VIDEO' ? (
+            <video
+              src={currentPhoto.url}
+              controls
+              autoPlay
+              className="max-w-[90vw] max-h-[75vh] object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={currentPhoto.url}
+              alt=""
+              className="max-w-[90vw] max-h-[75vh] object-contain"
+            />
+          )}
         </div>
       </div>
 

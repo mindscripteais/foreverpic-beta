@@ -72,7 +72,7 @@ export const photoRouter = createTRPCRouter({
         size: z.number(),
         width: z.number(),
         height: z.number(),
-        dataUrl: z.string().optional(),
+        type: z.enum(['PHOTO', 'VIDEO']).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -98,6 +98,7 @@ export const photoRouter = createTRPCRouter({
           key: input.key,
           url: publicUrl,
           thumbnail: thumbnailUrl,
+          type: input.type ?? 'PHOTO',
           size: input.size,
           width: input.width,
           height: input.height,
@@ -176,7 +177,7 @@ export const photoRouter = createTRPCRouter({
         width: z.number(),
         height: z.number(),
         guestName: z.string().min(1).max(100),
-        dataUrl: z.string().optional(),
+        type: z.enum(['PHOTO', 'VIDEO']).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -202,6 +203,7 @@ export const photoRouter = createTRPCRouter({
           key: input.key,
           url: publicUrl,
           thumbnail: thumbnailUrl,
+          type: input.type ?? 'PHOTO',
           size: input.size,
           width: input.width,
           height: input.height,

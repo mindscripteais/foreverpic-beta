@@ -65,6 +65,7 @@ model Photo {
   url            String
   thumbnail      String
   key            String    @unique
+  type           String    @default("PHOTO") // PHOTO or VIDEO
   size           Int
   width          Int
   height         Int
