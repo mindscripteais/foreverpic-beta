@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Heart, Award, Download, Maximize2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +22,14 @@ interface PhotoGridProps {
 
 export function PhotoGrid({ photos, currentUserId, onPhotoClick }: PhotoGridProps) {
   const [loaded, setLoaded] = useState<Record<string, boolean>>({})
+
+  // Debug: log photo URLs to help diagnose image loading issues
+  useEffect(() => {
+    if (photos.length > 0) {
+      console.log('[PhotoGrid] Rendering', photos.length, 'photos')
+      photos.forEach((p) => console.log('[PhotoGrid] Photo URL:', p.id, p.url.slice(0, 120)))
+    }
+  }, [photos])
 
   const getReactionCounts = (photo: Photo) => {
     const counts: Record<string, number> = {}

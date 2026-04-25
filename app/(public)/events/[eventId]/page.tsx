@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Heart, Award, Download, Upload, Users, Loader2, Sparkles, Camera, Share2, Link as LinkIcon, MessageCircle } from 'lucide-react'
+import JSZip from 'jszip'
 import { Button } from '@/components/ui'
 import { PhotoGrid, PhotoLightbox } from '@/components/photo'
 import { UploadZone } from '@/components/photo'
@@ -54,6 +55,39 @@ export default function EventGalleryPage() {
   const handleUploadComplete = (results: { id: string; url: string }[]) => {
     setUploadedCount((c) => c + results.length)
     setShowUploader(false)
+    // Invalidate cache so new photos appear immediately
+    utils.event.get.invalidate({ id: eventId })
+  }
+
+  const downloadUrls = trpc.photo.getDownloadUrls.useMutation()
+
+  const handleDownloadAll = async () => {
+    const zip = new JSZip()
+    const folder = zip.folder('photos') || zip
+
+    const urls = await downloadUrls.mutateAsync({ eventId })
+
+    const photoFetches = urls.urls
+      .filter((photo) => !!photo.downloadUrl)
+      .map(async (photo) => {
+        try {
+          const response = await fetch(photo.downloadUrl!)
+          const blob = await response.blob()
+          const ext = photo.url.split('.').pop() || 'jpg'
+          folder?.file(`photo-${photo.id.slice(0, 8)}.${ext}`, blob)
+        } catch (err) {
+          console.error('Failed to fetch photo:', photo.id, err)
+        }
+      })
+
+    await Promise.all(photoFetches)
+
+    const blob = await zip.generateAsync({ type: 'blob' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `${event?.name || 'event'}-photos.zip`
+    link.click()
+    URL.revokeObjectURL(link.href)
   }
 
   const handleShare = async () => {
@@ -121,7 +155,7 @@ export default function EventGalleryPage() {
               <span className="font-display text-xl font-semibold text-charcoal">ForeverPic</span>
             </Link>
             {photos.length > 0 && isOwner && (
-              <Button variant="secondary" size="sm" className="shadow-soft">
+              <Button variant="secondary" size="sm" className="shadow-soft" onClick={handleDownloadAll}>
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Scarica</span>
               </Button>

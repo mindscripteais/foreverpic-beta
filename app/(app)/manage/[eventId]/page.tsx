@@ -157,7 +157,12 @@ export default function ManageEventPage() {
                 </h2>
               </div>
               <div className="p-6">
-                <UploadZone eventId={eventId} />
+                <UploadZone
+                  eventId={eventId}
+                  onUploadComplete={() => {
+                    utils.event.get.invalidate({ id: eventId })
+                  }}
+                />
               </div>
             </div>
 

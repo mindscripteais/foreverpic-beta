@@ -259,11 +259,21 @@ export const photoRouter = createTRPCRouter({
         select: { id: true, key: true, url: true },
       })
 
-      const urls = photos.map((photo) => ({
-        id: photo.id,
-        url: photo.url,
-        downloadUrl: photo.url.startsWith('data:') ? photo.url : null,
-      }))
+      const urls = await Promise.all(
+        photos.map(async (photo) => {
+          let downloadUrl: string | null = null
+          if (photo.url.startsWith('data:')) {
+            downloadUrl = photo.url
+          } else if (isR2Configured()) {
+            try {
+              downloadUrl = await generateDownloadUrl(photo.key)
+            } catch {
+              downloadUrl = null
+            }
+          }
+          return { id: photo.id, url: photo.url, downloadUrl }
+        })
+      )
 
       return { urls }
     }),
