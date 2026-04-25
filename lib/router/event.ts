@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { generateQRToken } from '@/lib/utils'
 import { cookies } from 'next/headers'
+import { rateLimit, rateLimits } from '@/lib/rate-limit'
 
 export const eventRouter = createTRPCRouter({
   create: protectedProcedure
@@ -16,6 +17,10 @@ export const eventRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const limit = rateLimit(`event:create:${ctx.userId}`, rateLimits.createEvent)
+      if (!limit.success) {
+        throw new TRPCError({ code: 'TOO_MANY_REQUESTS', message: 'Too many events created. Please try again later.' })
+      }
       const user = await ctx.prisma.user.findUnique({
         where: { id: ctx.userId },
         include: { subscriptions: { orderBy: { createdAt: 'desc' }, take: 1 } },

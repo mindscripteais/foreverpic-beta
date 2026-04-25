@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { generatePhotoKey, generateUploadUrl, generateDownloadUrl, getPublicUrl, isR2Configured } from '@/lib/r2'
 import { TIER_LIMITS } from '@/lib/stripe'
 import { triggerPhotoAdded } from '@/lib/pusher'
+import { rateLimit, rateLimits } from '@/lib/rate-limit'
 
 export const photoRouter = createTRPCRouter({
   getUploadUrl: protectedProcedure
@@ -16,6 +17,11 @@ export const photoRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const rateLimitResult = rateLimit(`upload:${ctx.userId}`, rateLimits.upload)
+      if (!rateLimitResult.success) {
+        throw new TRPCError({ code: 'TOO_MANY_REQUESTS', message: 'Too many uploads. Please try again later.' })
+      }
+
       const event = await ctx.prisma.event.findUnique({
         where: { id: input.eventId },
         include: { owner: true, collaborators: true },
@@ -114,6 +120,11 @@ export const photoRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const rateLimitResult = rateLimit(`upload:guest:${input.eventId}`, rateLimits.upload)
+      if (!rateLimitResult.success) {
+        throw new TRPCError({ code: 'TOO_MANY_REQUESTS', message: 'Too many uploads for this event. Please try again later.' })
+      }
+
       const event = await ctx.prisma.event.findUnique({
         where: { id: input.eventId },
         include: { owner: true },

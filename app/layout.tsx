@@ -25,6 +25,23 @@ export const metadata: Metadata = {
   title: 'ForeverPic — Galleria Foto per Eventi',
   description: 'Condividi foto agli eventi via QR code. Galleria in tempo reale, reazioni e download facili.',
   keywords: ['condivisione foto', 'galleria eventi', 'QR code', 'foto in tempo reale'],
+  openGraph: {
+    type: 'website',
+    locale: 'it_IT',
+    url: 'https://foreverpic-beta.vercel.app',
+    siteName: 'ForeverPic',
+    title: 'ForeverPic — Galleria Foto per Eventi',
+    description: 'Condividi foto agli eventi via QR code. Galleria in tempo reale, reazioni e download facili.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ForeverPic — Galleria Foto per Eventi',
+    description: 'Condividi foto agli eventi via QR code. Galleria in tempo reale, reazioni e download facili.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export default function RootLayout({

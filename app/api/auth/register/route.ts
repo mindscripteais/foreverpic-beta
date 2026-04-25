@@ -1,9 +1,21 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { sendWelcomeEmail } from '@/lib/email'
+import { rateLimit, rateLimits } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   try {
+    // Rate limit by IP
+    const ip = request.headers.get('x-forwarded-for') || 'unknown'
+    const limit = rateLimit(`auth:register:${ip}`, rateLimits.auth)
+    if (!limit.success) {
+      return NextResponse.json(
+        { message: 'Too many registration attempts. Please try again later.' },
+        { status: 429 }
+      )
+    }
+
     const { name, email, password } = await request.json()
 
     if (!name || !email || !password) {
@@ -44,6 +56,9 @@ export async function POST(request: Request) {
         subscriptionTier: 'FREE',
       },
     })
+
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail(user.email, user.name).catch(() => {})
 
     return NextResponse.json({
       id: user.id,
