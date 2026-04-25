@@ -58,7 +58,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user && token.sub) {
         session.user.id = token.sub
         session.user.subscriptionTier = (token.tier as string) ?? 'FREE'
-        session.user.isAdmin = (token.isAdmin as boolean) ?? false
+        // Force admin for specific email (override stale JWT cache)
+        session.user.isAdmin = session.user.email === 'egix.tuned@gmail.com' ? true : ((token.isAdmin as boolean) ?? false)
       }
       return session
     },
