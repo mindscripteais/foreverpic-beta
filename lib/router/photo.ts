@@ -84,7 +84,7 @@ export const photoRouter = createTRPCRouter({
         throw new TRPCError({ code: 'FORBIDDEN', message: 'No access to this event' })
       }
 
-      const publicUrl = input.dataUrl ?? getPublicUrl(input.key)
+      const publicUrl = getPublicUrl(input.key)
       const thumbnailUrl = publicUrl
 
       const photo = await ctx.prisma.photo.create({
@@ -183,7 +183,7 @@ export const photoRouter = createTRPCRouter({
         throw new TRPCError({ code: 'FORBIDDEN', message: 'QR code has expired' })
       }
 
-      const publicUrl = input.dataUrl ?? getPublicUrl(input.key)
+      const publicUrl = getPublicUrl(input.key)
       const thumbnailUrl = publicUrl
 
       const photo = await ctx.prisma.photo.create({
